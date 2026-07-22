@@ -10,8 +10,7 @@ import Register from './pages/Register';
 import Profile from './pages/Profile';
 import Dashboard from './pages/Dashboard';
 import MarketPage from './pages/MarketPage';
-// 🚨 CHANGED IMPORT: Use the new name
-import FinanceHubPage from './pages/FinanceHubPage'; 
+import FinanceHubPage from './pages/FinanceHubPage';
 import TripPage from './pages/TripPage';
 import SavingsPage from './pages/SavingsPage';
 import AdminPanel from './pages/AdminPanel';
@@ -20,6 +19,7 @@ import BlogIndex from './pages/BlogIndex';
 import BlogDetail from './pages/BlogDetail';
 import { useState, useEffect } from 'react';
 
+// 🚀 ERROR BOUNDARY COMPONENT
 function ErrorBoundary({ children }) {
   const [hasError, setHasError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -63,7 +63,6 @@ export default function App() {
               <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/market" element={<ProtectedRoute><MarketPage /></ProtectedRoute>} />
-              {/* 🚨 CHANGED ROUTE: /generator to /finance */}
               <Route path="/finance" element={<ProtectedRoute><FinanceHubPage /></ProtectedRoute>} />
               <Route path="/trip" element={<ProtectedRoute><TripPage /></ProtectedRoute>} />
               <Route path="/savings" element={<ProtectedRoute><SavingsPage /></ProtectedRoute>} />
