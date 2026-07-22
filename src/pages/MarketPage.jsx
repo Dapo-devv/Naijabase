@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { ShoppingCart, Save, Pencil, Calendar, Trash2, Eye, X } from 'lucide-react';
 import AdSlot from '../components/AdSlot';
 import MarketItemList from '../components/MarketItemList';
@@ -17,29 +17,17 @@ export default function MarketPage() {
   const [prices, setPrices] = useState({});
   const [saved, setSaved] = useState(false);
 
-  const justSavedRef = useRef(false);
-
   if (!data) return null;
 
-  // Always keep inputs blank unless editing
   useEffect(() => {
-    if (justSavedRef.current) return;
-    
-    if (editingDate) {
-      const log = data.marketLogs.find((l) => l.date === editingDate);
-      if (log) {
-        const loadedPrices = {};
-        data.marketItems.forEach((it) => {
-          loadedPrices[it] = log.prices?.[it] ?? '';
-        });
-        setPrices(loadedPrices);
-      }
-    } else {
-      const cleared = {};
-      data.marketItems.forEach((it) => { cleared[it] = ''; });
-      setPrices(cleared);
+    if (!editingDate) {
+      const init = {};
+      data.marketItems.forEach((it) => {
+        init[it] = todayLog?.prices?.[it] ?? '';
+      });
+      setPrices(init);
     }
-  }, [data.marketItems, editingDate, data.marketLogs, justSavedRef]);
+  }, [data.marketItems, todayLog, editingDate]);
 
   const handlePriceChange = (item, val) => {
     setPrices((p) => ({ ...p, [item]: val }));
@@ -87,24 +75,24 @@ export default function MarketPage() {
       return { ...d, marketLogs: nextLogs };
     });
 
-    justSavedRef.current = true; 
     setSaved(true);
     setEditingDate(null);
-    
     const cleared = {};
     data.marketItems.forEach((it) => { cleared[it] = ''; });
     setPrices(cleared);
-
-    setTimeout(() => { 
-      justSavedRef.current = false; 
-      setSaved(false);
-    }, 2500);
+    setTimeout(() => setSaved(false), 2500);
   };
 
   const handleEdit = (logDate) => {
     const log = data.marketLogs.find((l) => l.date === logDate);
     if (!log) return;
     setEditingDate(logDate);
+    const loadedPrices = {};
+    data.marketItems.forEach((it) => {
+      loadedPrices[it] = log.prices?.[it] ?? '';
+    });
+    setPrices(loadedPrices);
+    setSaved(false);
     setViewingLog(null);
   };
 
