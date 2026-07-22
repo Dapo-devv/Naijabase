@@ -41,49 +41,26 @@ export default function App() {
             <Route path="/blog/:slug" element={<BlogDetail />} />
           </Routes>
         </main>
-
-        {/* Sticky bottom banner ad - mobile only */}
         <div className="md:hidden fixed bottom-14 left-0 w-full z-30 px-2">
           <AdSlot width={320} height={50} label="Ad Space" className="!py-2" />
         </div>
-        
         <BottomNav />
-
-        {/* --- Social Media Footer --- */}
         <footer className="bg-white border-t border-gray-200 py-6 mt-8">
           <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-sm text-gray-500">
               © {new Date().getFullYear()} <span className="font-semibold text-primary">NaijaBase</span>. All rights reserved.
             </p>
             <div className="flex items-center gap-5">
-              <a 
-                href="https://www.instagram.com/naijabase9" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="text-gray-400 hover:text-primary transition-colors"
-                aria-label="Follow NaijaBase on Instagram"
-              >
+              <a href="https://www.instagram.com/naijabase9" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-primary transition-colors" aria-label="Follow NaijaBase on Instagram">
                 <Instagram className="w-5 h-5" />
               </a>
-              <a 
-                href="https://x.com/naijabase9" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="text-gray-400 hover:text-primary transition-colors"
-                aria-label="Follow NaijaBase on X"
-              >
+              <a href="https://x.com/naijabase9" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-primary transition-colors" aria-label="Follow NaijaBase on X">
                 <Twitter className="w-5 h-5" />
               </a>
-              <a 
-                href="https://naijabase.space" 
-                className="text-sm font-medium text-primary hover:underline"
-              >
-                Visit App
-              </a>
+              <a href="https://naijabase.space" className="text-sm font-medium text-primary hover:underline">Visit App</a>
             </div>
           </div>
         </footer>
-
       </div>
     </NaijaBaseProvider>
   );
