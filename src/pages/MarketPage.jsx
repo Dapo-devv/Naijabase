@@ -1,10 +1,18 @@
-import { useState, useEffect, useRef } from 'react';
-import { ShoppingCart, Save, Pencil, Calendar, Trash2, Eye, X } from 'lucide-react';
-import AdSlot from '../components/AdSlot';
-import MarketItemList from '../components/MarketItemList';
-import MarketChart from '../components/MarketChart';
-import { useNaijaBase } from '../context/NaijaBaseContext';
-import { todayISO, formatDate, naira } from '../utils/constants';
+import { useState, useEffect, useRef } from "react";
+import {
+  ShoppingCart,
+  Save,
+  Pencil,
+  Calendar,
+  Trash2,
+  Eye,
+  X,
+} from "lucide-react";
+import AdSlot from "../components/AdSlot";
+import MarketItemList from "../components/MarketItemList";
+import MarketChart from "../components/MarketChart";
+import { useNaijaBase } from "../context/NaijaBaseContext";
+import { todayISO, formatDate, naira } from "../utils/constants";
 
 export default function MarketPage() {
   const { currentUser, updateUserData } = useNaijaBase();
@@ -24,22 +32,24 @@ export default function MarketPage() {
   // Always keep inputs blank unless editing
   useEffect(() => {
     if (justSavedRef.current) return;
-    
+
     if (editingDate) {
       const log = data.marketLogs.find((l) => l.date === editingDate);
       if (log) {
         const loadedPrices = {};
         data.marketItems.forEach((it) => {
-          loadedPrices[it] = log.prices?.[it] ?? '';
+          loadedPrices[it] = log.prices?.[it] ?? "";
         });
         setPrices(loadedPrices);
       }
     } else {
       const cleared = {};
-      data.marketItems.forEach((it) => { cleared[it] = ''; });
+      data.marketItems.forEach((it) => {
+        cleared[it] = "";
+      });
       setPrices(cleared);
     }
-  }, [data.marketItems, editingDate, data.marketLogs, justSavedRef]);
+  }, [data.marketItems, editingDate, data.marketLogs]); // ✅ justSavedRef removed here
 
   const handlePriceChange = (item, val) => {
     setPrices((p) => ({ ...p, [item]: val }));
@@ -52,7 +62,7 @@ export default function MarketPage() {
       ...d,
       marketItems: [...d.marketItems, name],
     }));
-    setPrices((p) => ({ ...p, [name]: '' }));
+    setPrices((p) => ({ ...p, [name]: "" }));
   };
 
   const handleRemoveItem = (name) => {
@@ -87,16 +97,18 @@ export default function MarketPage() {
       return { ...d, marketLogs: nextLogs };
     });
 
-    justSavedRef.current = true; 
+    justSavedRef.current = true;
     setSaved(true);
     setEditingDate(null);
-    
+
     const cleared = {};
-    data.marketItems.forEach((it) => { cleared[it] = ''; });
+    data.marketItems.forEach((it) => {
+      cleared[it] = "";
+    });
     setPrices(cleared);
 
-    setTimeout(() => { 
-      justSavedRef.current = false; 
+    setTimeout(() => {
+      justSavedRef.current = false;
       setSaved(false);
     }, 2500);
   };
@@ -109,7 +121,8 @@ export default function MarketPage() {
   };
 
   const handleDeleteLog = (logDate) => {
-    if (!window.confirm(`Delete market log for ${formatDate(logDate)}?`)) return;
+    if (!window.confirm(`Delete market log for ${formatDate(logDate)}?`))
+      return;
     updateUserData((d) => ({
       ...d,
       marketLogs: d.marketLogs.filter((l) => l.date !== logDate),
@@ -117,7 +130,9 @@ export default function MarketPage() {
     if (editingDate === logDate) {
       setEditingDate(null);
       const cleared = {};
-      data.marketItems.forEach((it) => { cleared[it] = ''; });
+      data.marketItems.forEach((it) => {
+        cleared[it] = "";
+      });
       setPrices(cleared);
     }
     setViewingLog(null);
@@ -126,21 +141,27 @@ export default function MarketPage() {
   const isEditing = !!editingDate;
   const targetDate = editingDate || today;
   const hasTargetLog = data.marketLogs.some((l) => l.date === targetDate);
-  const sortedLogs = [...data.marketLogs].sort((a, b) => b.date.localeCompare(a.date));
+  const sortedLogs = [...data.marketLogs].sort((a, b) =>
+    b.date.localeCompare(a.date),
+  );
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 animate-fade-in space-y-8">
       <div>
         <h1 className="text-2xl font-extrabold text-neutral-text flex items-center gap-2">
-          <ShoppingCart className="w-6 h-6 text-primary" /> Daily Expense Tracker
+          <ShoppingCart className="w-6 h-6 text-primary" /> Daily Expense
+          Tracker
         </h1>
-        <p className="text-sm text-gray-500">Log exactly how much you spent on each item today.</p>
+        <p className="text-sm text-gray-500">
+          Log exactly how much you spent on each item today.
+        </p>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
         {isEditing && (
           <div className="mb-4 flex items-center gap-2 text-sm text-secondary-600 bg-secondary-50 px-3 py-2 rounded-lg">
-            <Pencil className="w-4 h-4" /> Editing expenses for <strong>{formatDate(editingDate)}</strong>
+            <Pencil className="w-4 h-4" /> Editing expenses for{" "}
+            <strong>{formatDate(editingDate)}</strong>
           </div>
         )}
         <MarketItemList
@@ -158,12 +179,14 @@ export default function MarketPage() {
           {isEditing
             ? `Update Expenses for ${formatDate(editingDate)}`
             : hasTargetLog
-            ? "Update Today's Expenses"
-            : "Log Today's Expenses"}
+              ? "Update Today's Expenses"
+              : "Log Today's Expenses"}
         </button>
         {saved && (
           <p className="text-center text-sm text-green-600 mt-2 animate-fade-in">
-            {isEditing ? 'Expenses updated for selected date.' : 'Expenses logged for today.'}
+            {isEditing
+              ? "Expenses updated for selected date."
+              : "Expenses logged for today."}
           </p>
         )}
       </div>
@@ -178,14 +201,16 @@ export default function MarketPage() {
         </h2>
         {sortedLogs.length === 0 ? (
           <div className="bg-gray-50 rounded-xl p-8 text-center text-gray-400 border border-dashed">
-            <p className="text-sm">No logs yet. Log your first daily expenses above!</p>
+            <p className="text-sm">
+              No logs yet. Log your first daily expenses above!
+            </p>
           </div>
         ) : (
           <div className="space-y-3">
             {sortedLogs.map((log) => {
               const dailyTotal = Object.values(log.prices).reduce(
                 (sum, val) => sum + (val || 0),
-                0
+                0,
               );
               return (
                 <div
@@ -193,9 +218,12 @@ export default function MarketPage() {
                   className="bg-white rounded-xl border border-gray-100 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm hover:shadow-md transition-shadow"
                 >
                   <div className="flex-1">
-                    <p className="font-semibold text-neutral-text">{formatDate(log.date)}</p>
+                    <p className="font-semibold text-neutral-text">
+                      {formatDate(log.date)}
+                    </p>
                     <p className="text-sm text-gray-500">
-                      {Object.keys(log.prices).length} items bought · Total spent: {naira(dailyTotal)}
+                      {Object.keys(log.prices).length} items bought · Total
+                      spent: {naira(dailyTotal)}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -229,34 +257,57 @@ export default function MarketPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-fade-in">
           <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
             <div className="flex items-center justify-between p-5 border-b border-gray-100">
-              <h3 className="text-lg font-bold text-neutral-text">Expense Details</h3>
-              <button onClick={() => setViewingLog(null)} className="p-1 hover:bg-gray-100 rounded-lg">
+              <h3 className="text-lg font-bold text-neutral-text">
+                Expense Details
+              </h3>
+              <button
+                onClick={() => setViewingLog(null)}
+                className="p-1 hover:bg-gray-100 rounded-lg"
+              >
                 <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
             <div className="p-5 space-y-4">
               <div className="flex justify-between items-center bg-gray-50 rounded-xl p-3">
                 <span className="text-sm text-gray-500">Date</span>
-                <span className="font-semibold">{formatDate(viewingLog.date)}</span>
+                <span className="font-semibold">
+                  {formatDate(viewingLog.date)}
+                </span>
               </div>
               <div className="flex justify-between items-center bg-primary-50 rounded-xl p-3">
                 <span className="text-sm text-primary-600">Total Spent</span>
-                <span className="font-bold text-primary text-lg">{naira(Object.values(viewingLog.prices).reduce((a, b) => a + b, 0))}</span>
+                <span className="font-bold text-primary text-lg">
+                  {naira(
+                    Object.values(viewingLog.prices).reduce((a, b) => a + b, 0),
+                  )}
+                </span>
               </div>
               <div className="border-t border-gray-100 pt-3">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Purchase Breakdown</p>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                  Purchase Breakdown
+                </p>
                 <div className="space-y-1.5">
                   {Object.entries(viewingLog.prices).map(([item, price]) => (
-                    <div key={item} className="flex justify-between text-sm py-1 border-b border-gray-50 last:border-0">
+                    <div
+                      key={item}
+                      className="flex justify-between text-sm py-1 border-b border-gray-50 last:border-0"
+                    >
                       <span className="text-gray-700">{item}</span>
-                      <span className="font-medium text-gray-900">{naira(price)}</span>
+                      <span className="font-medium text-gray-900">
+                        {naira(price)}
+                      </span>
                     </div>
                   ))}
                 </div>
               </div>
             </div>
             <div className="p-4 border-t border-gray-100 bg-gray-50 text-center">
-              <button onClick={() => setViewingLog(null)} className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors">Close</button>
+              <button
+                onClick={() => setViewingLog(null)}
+                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>

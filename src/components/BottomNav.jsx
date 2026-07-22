@@ -27,7 +27,8 @@ export default function BottomNav() {
       <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 flex z-40 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
         {tab('/', 'Home', Home)}
         {tab('/market', 'Market', ShoppingCart)}
-        {tab('/generator', 'Gen', Zap)}
+        {/* 🚨 CHANGED: "Gen" to "Finance" */}
+        {tab('/finance', 'Finance', Zap)}
         {tab('/trip', 'Trip', MapPin)}
         {tab('/savings', 'Save', PiggyBank)}
         {tab('/blog', 'Blog', BookOpen)}

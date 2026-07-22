@@ -42,23 +42,21 @@ export function getFreshUserData() {
       fuelCostPerLiter: "",
       consumptionRate: "",
       appliances: { ac: false, fridge: false, tv: false, lights: false },
-      // --- NEW: Utilities Fields ---
+      // --- Utilities Fields ---
       utilities: {
-        electricity: 0, // Prepaid token per month
-        cableTV: 0, // DSTV/GOTV per month
-        internet: 0, // WiFi/Data per month
-        water: 0, // Water bill per month
-        waste: 0, // Waste disposal per month
+        electricity: 0,
+        cableTV: 0,
+        internet: 0,
+        water: 0,
+        waste: 0,
       },
-      // --- Existing Daily & Business fields ---
+      // --- Daily Life fields ---
       dailyTransport: 0,
       dailyFood: 0,
       dailyData: 0,
       dailyMisc: 0,
-      bizRent: 0,
-      bizStaff: 0,
-      bizMaterials: 0,
-      bizLogistics: 0,
+      // --- 🚀 NEW BUSINESS TRANSACTIONS LEDGER ---
+      transactions: [],
     },
     trips: [],
     savings: {

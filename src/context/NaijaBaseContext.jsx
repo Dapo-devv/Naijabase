@@ -38,7 +38,6 @@ export function NaijaBaseProvider({ children }) {
             .insert({ id: userId, data: freshData });
 
           if (insertError) {
-            // 🚀 This now prints the ACTUAL error JSON to your console
             console.error(
               "❌ Failed to create user data row. Full error:",
               insertError,
@@ -50,6 +49,13 @@ export function NaijaBaseProvider({ children }) {
             console.log("✅ Data row created successfully!", insertData);
             setUserData(freshData);
           }
+        } else if (error.status === 401) {
+          // 🚨 FIXED: Automatically log out if Supabase returns a 401 Unauthorized
+          console.error("❌ Supabase session expired. Logging out...");
+          supabase.auth.signOut();
+          setUser(null);
+          setUserData(null);
+          setLoading(false);
         } else {
           console.error("❌ Error fetching user data:", error);
         }
