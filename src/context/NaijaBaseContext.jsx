@@ -16,42 +16,53 @@ export function NaijaBaseProvider({ children }) {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // --- Robust Fetch Function ---
+  // --- Highly Robust Fetch Function ---
   const fetchUserData = useCallback(async (userId) => {
     if (!userId) return;
 
-    // 1. Attempt to fetch the existing data
-    const { data, error } = await supabase
-      .from("user_data")
-      .select("data")
-      .eq("id", userId)
-      .single();
-
-    // 2. If truly not found (PGRST116), we create the row safely
-    if (error && error.code === "PGRST116") {
-      const freshData = getFreshUserData();
-      // Insert the row into Supabase so it exists for future refreshes
-      const { error: insertError } = await supabase
+    try {
+      // 1. Attempt to fetch the existing data
+      const { data, error } = await supabase
         .from("user_data")
-        .insert({ id: userId, data: freshData });
+        .select("data")
+        .eq("id", userId)
+        .single();
 
-      if (insertError) {
-        console.error("Failed to create user data row:", insertError);
-      } else {
-        setUserData(freshData);
+      // 2. If missing (PGRST116), force-create the row
+      if (error) {
+        if (error.code === "PGRST116") {
+          console.log("⚠️ No data row found for user. Creating one now...");
+          const freshData = getFreshUserData();
+          const { error: insertError, data: insertData } = await supabase
+            .from("user_data")
+            .insert({ id: userId, data: freshData });
+
+          if (insertError) {
+            // 🚀 This now prints the ACTUAL error JSON to your console
+            console.error(
+              "❌ Failed to create user data row. Full error:",
+              insertError,
+            );
+            console.error("🔴 Status code:", insertError.status);
+            console.error("🔴 Status text:", insertError.statusText);
+            console.error("🔴 Error message:", insertError.message);
+          } else {
+            console.log("✅ Data row created successfully!", insertData);
+            setUserData(freshData);
+          }
+        } else {
+          console.error("❌ Error fetching user data:", error);
+        }
+        return;
       }
-      return;
-    }
 
-    // 3. If there's a different error
-    if (error) {
-      console.error("Error fetching user data:", error);
-      return;
-    }
-
-    // 4. Success! Set the real data
-    if (data) {
-      setUserData(data.data);
+      // 3. Success! Set the real data
+      if (data) {
+        console.log("✅ Loaded user data:", data.data);
+        setUserData(data.data);
+      }
+    } catch (err) {
+      console.error("❌ Unexpected error in fetchUserData:", err);
     }
   }, []);
 
@@ -103,7 +114,6 @@ export function NaijaBaseProvider({ children }) {
       if (!authData.user)
         return { ok: false, error: "Account creation failed." };
 
-      // The DB trigger handles the insert, but we fetch immediately after
       setUser(authData.user);
       await fetchUserData(authData.user.id);
       return { ok: true };
@@ -137,25 +147,23 @@ export function NaijaBaseProvider({ children }) {
     return { ok: true };
   }, []);
 
-  // --- Update Data (Persists to Supabase) ---
+  // --- Update Data ---
   const updateUserData = useCallback(
     async (updater) => {
       if (!user) return;
       const newData =
         typeof updater === "function" ? updater(userData) : updater;
       setUserData(newData);
-
       const { error } = await supabase
         .from("user_data")
         .update({ data: newData, updated_at: new Date() })
         .eq("id", user.id);
-
-      if (error) console.error("Supabase sync failed:", error);
+      if (error) console.error("❌ Supabase sync failed:", error);
     },
     [user, userData],
   );
 
-  // --- Replace Data (Import) ---
+  // --- Replace Data ---
   const replaceUserData = useCallback(
     async (newData) => {
       if (!user) return;
@@ -174,7 +182,7 @@ export function NaijaBaseProvider({ children }) {
     setUserData(null);
   }, []);
 
-  // --- User Object Composition ---
+  // --- User Object ---
   const currentUser = useMemo(() => {
     if (!user || !userData) return null;
     return {
