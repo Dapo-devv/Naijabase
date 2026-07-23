@@ -29,7 +29,6 @@ export default function MarketPage() {
 
   if (!data) return null;
 
-  // Always keep inputs blank unless editing
   useEffect(() => {
     if (justSavedRef.current) return;
 
@@ -49,7 +48,7 @@ export default function MarketPage() {
       });
       setPrices(cleared);
     }
-  }, [data.marketItems, editingDate, data.marketLogs]); // ✅ justSavedRef removed here
+  }, [data.marketItems, editingDate, data.marketLogs]);
 
   const handlePriceChange = (item, val) => {
     setPrices((p) => ({ ...p, [item]: val }));
