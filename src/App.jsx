@@ -84,16 +84,17 @@ export default function App() {
           <footer className="bg-white border-t border-gray-200 py-6 mt-8">
             <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
               <p className="text-sm text-gray-500">
-                © {new Date().getFullYear()} <span className="font-semibold text-primary">NaijaBase</span>. All rights reserved.
+                © {new Date().getFullYear()} <span className="font-semibold text-primary">KudiTrack</span>. All rights reserved.
               </p>
               <div className="flex items-center gap-5">
-                <a href="https://www.instagram.com/naijabase9" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-primary transition-colors" aria-label="Follow NaijaBase on Instagram">
+                <a href="https://www.instagram.com/naijabase9" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-primary transition-colors" aria-label="Follow KudiTrack on Instagram">
                   <Instagram className="w-5 h-5" />
                 </a>
-                <a href="https://x.com/naijabase9" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-primary transition-colors" aria-label="Follow NaijaBase on X">
+                <a href="https://x.com/naijabase9" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-primary transition-colors" aria-label="Follow KudiTrack on X">
                   <Twitter className="w-5 h-5" />
                 </a>
-                <a href="https://naijabase.space" className="text-sm font-medium text-primary hover:underline">Visit App</a>
+                {/* Visit App link updated to new domain */}
+                <a href="https://kuditrack.com.ng" className="text-sm font-medium text-primary hover:underline">Visit App</a>
               </div>
             </div>
           </footer>
@@ -102,4 +103,4 @@ export default function App() {
       </NaijaBaseProvider>
     </ErrorBoundary>
   );
-}// Triggering deployment
+}
