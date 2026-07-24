@@ -5,6 +5,7 @@ import {
   useEffect,
   useCallback,
   useMemo,
+  useRef,
 } from "react";
 import { supabase } from "../lib/supabase";
 import { getFreshUserData } from "../utils/constants";
@@ -15,6 +16,12 @@ export function NaijaBaseProvider({ children }) {
   const [user, setUser] = useState(null);
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const dataRef = useRef(userData);
+
+  // Always keep the ref synced with userData
+  useEffect(() => {
+    dataRef.current = userData;
+  }, [userData]);
 
   const fetchUserData = useCallback(async (userId) => {
     if (!userId) return;
@@ -64,7 +71,9 @@ export function NaijaBaseProvider({ children }) {
   useEffect(() => {
     let isMounted = true;
     const fetchSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (isMounted && session?.user) {
         setUser(session.user);
         await fetchUserData(session.user.id);
@@ -102,7 +111,8 @@ export function NaijaBaseProvider({ children }) {
         options: { data: { username, name, surname } },
       });
       if (authError) return { ok: false, error: authError.message };
-      if (!authData.user) return { ok: false, error: "Account creation failed." };
+      if (!authData.user)
+        return { ok: false, error: "Account creation failed." };
 
       setUser(authData.user);
       await fetchUserData(authData.user.id);
@@ -134,31 +144,45 @@ export function NaijaBaseProvider({ children }) {
     return { ok: true };
   }, []);
 
-  // 🚀 FIXED: Functional setter ensures we NEVER lose old data due to stale closures
-  const updateUserData = useCallback(async (updater) => {
-    if (!user) return;
-    setUserData((prevData) => {
-      const newData = typeof updater === 'function' ? updater(prevData) : updater;
-      supabase
-        .from('user_data')
-        .update({ data: newData, updated_at: new Date() })
-        .eq('id', user.id)
-        .then(({ error }) => {
-          if (error) console.error("❌ Supabase sync failed:", error);
-        });
-      return newData;
-    });
-  }, [user]);
+  // 🚀 FINAL FIX: Uses `dataRef.current` to guarantee the latest state is NEVER overwritten
+  const updateUserData = useCallback(
+    async (updater) => {
+      if (!user) return;
 
-  // 🚀 FIXED: Same functional setter for Import
-  const replaceUserData = useCallback(async (newData) => {
-    if (!user) return;
-    setUserData(newData);
-    await supabase
-      .from('user_data')
-      .update({ data: newData, updated_at: new Date() })
-      .eq('id', user.id);
-  }, [user]);
+      // Get the absolute latest state (ensuring we never use a stale snapshot)
+      const prevData = dataRef.current;
+      const newData =
+        typeof updater === "function" ? updater(prevData) : updater;
+
+      // Optimistically update local state
+      setUserData(newData);
+
+      // Persist to Supabase
+      const { error } = await supabase
+        .from("user_data")
+        .update({ data: newData, updated_at: new Date() })
+        .eq("id", user.id);
+
+      if (error) {
+        console.error("❌ Supabase sync failed:", error);
+        // Revert the local state if save fails (keeps you honest)
+        setUserData(prevData);
+      }
+    },
+    [user],
+  );
+
+  const replaceUserData = useCallback(
+    async (newData) => {
+      if (!user) return;
+      setUserData(newData);
+      await supabase
+        .from("user_data")
+        .update({ data: newData, updated_at: new Date() })
+        .eq("id", user.id);
+    },
+    [user],
+  );
 
   const deleteAccount = useCallback(async () => {
     await supabase.auth.signOut();
@@ -213,6 +237,7 @@ export function NaijaBaseProvider({ children }) {
 
 export function useNaijaBase() {
   const ctx = useContext(NaijaBaseContext);
-  if (!ctx) throw new Error("useNaijaBase must be used within NaijaBaseProvider");
+  if (!ctx)
+    throw new Error("useNaijaBase must be used within NaijaBaseProvider");
   return ctx;
 }

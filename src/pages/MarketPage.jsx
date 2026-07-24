@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import {
   ShoppingCart,
   Save,
@@ -18,22 +18,18 @@ export default function MarketPage() {
   const { currentUser, updateUserData } = useNaijaBase();
   const data = currentUser?.data;
   const today = todayISO();
-  const todayLog = data?.marketLogs.find((l) => l.date === today);
 
-  const [editingDate, setEditingDate] = useState(null);
+  const [editingId, setEditingId] = useState(null);
   const [viewingLog, setViewingLog] = useState(null);
   const [prices, setPrices] = useState({});
   const [saved, setSaved] = useState(false);
 
-  const justSavedRef = useRef(false);
-
   if (!data) return null;
 
+  // Load prices when editing, or clear them when not
   useEffect(() => {
-    if (justSavedRef.current) return;
-
-    if (editingDate) {
-      const log = data.marketLogs.find((l) => l.date === editingDate);
+    if (editingId) {
+      const log = data.marketLogs.find((l) => l.id === editingId);
       if (log) {
         const loadedPrices = {};
         data.marketItems.forEach((it) => {
@@ -48,7 +44,7 @@ export default function MarketPage() {
       });
       setPrices(cleared);
     }
-  }, [data.marketItems, editingDate, data.marketLogs]);
+  }, [data.marketItems, editingId, data.marketLogs]);
 
   const handlePriceChange = (item, val) => {
     setPrices((p) => ({ ...p, [item]: val }));
@@ -83,63 +79,52 @@ export default function MarketPage() {
       pricesObj[it] = isNaN(v) ? 0 : v;
     });
 
-    const targetDate = editingDate || today;
+    const targetDate = editingId
+      ? data.marketLogs.find((l) => l.id === editingId)?.date || today
+      : today;
+
+    // 🚀 FIX: Every log gets a unique ID using Date.now()
+    const newLog = { id: Date.now(), date: targetDate, prices: pricesObj };
+
     updateUserData((d) => {
-      const existingIdx = d.marketLogs.findIndex((l) => l.date === targetDate);
       let nextLogs;
-      if (existingIdx >= 0) {
-        nextLogs = [...d.marketLogs];
-        nextLogs[existingIdx] = { date: targetDate, prices: pricesObj };
+      if (editingId) {
+        // If editing, replace the specific log by ID
+        nextLogs = d.marketLogs.map((l) => (l.id === editingId ? newLog : l));
       } else {
-        nextLogs = [...d.marketLogs, { date: targetDate, prices: pricesObj }];
+        // If new, ALWAYS append to the end of the list
+        nextLogs = [...d.marketLogs, newLog];
       }
       return { ...d, marketLogs: nextLogs };
     });
 
-    justSavedRef.current = true;
     setSaved(true);
-    setEditingDate(null);
-
+    setEditingId(null);
+    // Clear inputs
     const cleared = {};
     data.marketItems.forEach((it) => {
       cleared[it] = "";
     });
     setPrices(cleared);
-
-    setTimeout(() => {
-      justSavedRef.current = false;
-      setSaved(false);
-    }, 2500);
+    setTimeout(() => setSaved(false), 2500);
   };
 
-  const handleEdit = (logDate) => {
-    const log = data.marketLogs.find((l) => l.date === logDate);
-    if (!log) return;
-    setEditingDate(logDate);
+  const handleEdit = (id) => {
+    setEditingId(id);
     setViewingLog(null);
   };
 
-  const handleDeleteLog = (logDate) => {
-    if (!window.confirm(`Delete market log for ${formatDate(logDate)}?`))
-      return;
+  const handleDeleteLog = (id) => {
+    if (!window.confirm(`Delete this expense log?`)) return;
     updateUserData((d) => ({
       ...d,
-      marketLogs: d.marketLogs.filter((l) => l.date !== logDate),
+      marketLogs: d.marketLogs.filter((l) => l.id !== id),
     }));
-    if (editingDate === logDate) {
-      setEditingDate(null);
-      const cleared = {};
-      data.marketItems.forEach((it) => {
-        cleared[it] = "";
-      });
-      setPrices(cleared);
-    }
+    if (editingId === id) setEditingId(null);
     setViewingLog(null);
   };
 
-  const isEditing = !!editingDate;
-  const targetDate = editingDate || today;
-  const hasTargetLog = data.marketLogs.some((l) => l.date === targetDate);
+  const isEditing = !!editingId;
   const sortedLogs = [...data.marketLogs].sort((a, b) =>
     b.date.localeCompare(a.date),
   );
@@ -159,8 +144,7 @@ export default function MarketPage() {
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
         {isEditing && (
           <div className="mb-4 flex items-center gap-2 text-sm text-secondary-600 bg-secondary-50 px-3 py-2 rounded-lg">
-            <Pencil className="w-4 h-4" /> Editing expenses for{" "}
-            <strong>{formatDate(editingDate)}</strong>
+            <Pencil className="w-4 h-4" /> Editing this expense log
           </div>
         )}
         <MarketItemList
@@ -175,17 +159,11 @@ export default function MarketPage() {
           className="mt-4 w-full flex items-center justify-center gap-2 py-3 bg-primary text-white font-semibold rounded-xl hover:bg-primary-600 transition-colors"
         >
           <Save className="w-5 h-5" />
-          {isEditing
-            ? `Update Expenses for ${formatDate(editingDate)}`
-            : hasTargetLog
-              ? "Update Today's Expenses"
-              : "Log Today's Expenses"}
+          {isEditing ? `Update This Log` : "Log Today's Expenses"}
         </button>
         {saved && (
           <p className="text-center text-sm text-green-600 mt-2 animate-fade-in">
-            {isEditing
-              ? "Expenses updated for selected date."
-              : "Expenses logged for today."}
+            {isEditing ? "Log updated!" : "New expense log added!"}
           </p>
         )}
       </div>
@@ -196,7 +174,7 @@ export default function MarketPage() {
 
       <div>
         <h2 className="text-lg font-bold text-neutral-text flex items-center gap-2 mb-4">
-          <Calendar className="w-5 h-5 text-primary" /> Past Expense Logs
+          <Calendar className="w-5 h-5 text-primary" /> All Expense Logs
         </h2>
         {sortedLogs.length === 0 ? (
           <div className="bg-gray-50 rounded-xl p-8 text-center text-gray-400 border border-dashed">
@@ -213,7 +191,7 @@ export default function MarketPage() {
               );
               return (
                 <div
-                  key={log.date}
+                  key={log.id}
                   className="bg-white rounded-xl border border-gray-100 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm hover:shadow-md transition-shadow"
                 >
                   <div className="flex-1">
@@ -233,13 +211,13 @@ export default function MarketPage() {
                       <Eye className="w-3.5 h-3.5" /> View
                     </button>
                     <button
-                      onClick={() => handleEdit(log.date)}
+                      onClick={() => handleEdit(log.id)}
                       className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-primary bg-primary-50 hover:bg-primary-100 rounded-lg transition-colors"
                     >
                       <Pencil className="w-3.5 h-3.5" /> Edit
                     </button>
                     <button
-                      onClick={() => handleDeleteLog(log.date)}
+                      onClick={() => handleDeleteLog(log.id)}
                       className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
                     >
                       <Trash2 className="w-3.5 h-3.5" /> Delete
