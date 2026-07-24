@@ -55,7 +55,16 @@ export function getFreshUserData() {
       dailyFood: 0,
       dailyData: 0,
       dailyMisc: 0,
-      // --- 🚀 NEW BUSINESS TRANSACTIONS LEDGER ---
+      // --- Business fields ---
+      bizRevenue: 0,
+      bizMaterials: 0,
+      bizLogistics: 0,
+      bizStaff: 0,
+      bizRent: 0,
+      bizMarketing: 0,
+
+      // --- 🚀 NEW: Finance History Ledger ---
+      financeLogs: [],
       transactions: [],
     },
     trips: [],

@@ -1,61 +1,81 @@
-import { useState } from 'react';
-import { Link, useNavigate, Navigate } from 'react-router-dom';
-import { Leaf, AlertTriangle } from 'lucide-react';
-import { useNaijaBase } from '../context/NaijaBaseContext';
+import { useState } from "react";
+import { Link, useNavigate, Navigate } from "react-router-dom";
+import { AlertTriangle, Loader2 } from "lucide-react";
+import { useNaijaBase } from "../context/NaijaBaseContext";
 
 export default function Register() {
   const { state, register } = useNaijaBase();
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
-  const [username, setUsername] = useState('');
-  const [name, setName] = useState('');
-  const [surname, setSurname] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const [name, setName] = useState("");
+  const [surname, setSurname] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false); // 🚀 Loading state
 
   if (state.currentUserId != null) return <Navigate to="/" replace />;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
+
+    // 🚀 Validations
     if (email.trim().length < 5) {
-      setError('Please enter a valid email address.');
+      setError("Please enter a valid email address.");
       return;
     }
     if (username.trim().length < 2) {
-      setError('Username must be at least 2 characters.');
+      setError("Username must be at least 2 characters.");
       return;
     }
     if (name.trim().length < 1) {
-      setError('Please enter your first name.');
+      setError("Please enter your first name.");
       return;
     }
     if (surname.trim().length < 1) {
-      setError('Please enter your surname.');
+      setError("Please enter your surname.");
       return;
     }
     if (password.length < 6) {
-      setError('Password must be at least 6 characters.');
+      setError("Password must be at least 6 characters.");
       return;
     }
-    const res = await register(email.trim(), password, username.trim(), name.trim(), surname.trim());
+
+    setLoading(true); // 🚀 Start loading
+    const res = await register(
+      email.trim(),
+      password,
+      username.trim(),
+      name.trim(),
+      surname.trim(),
+    );
+    setLoading(false); // 🚀 Stop loading
+
     if (!res.ok) {
       setError(res.error);
       return;
     }
     // Small delay to let Supabase auth state update before redirecting to protected Dashboard
-    setTimeout(() => navigate('/'), 300);
+    setTimeout(() => navigate("/"), 300);
   };
 
   return (
     <div className="max-w-md mx-auto px-4 py-10 animate-fade-in">
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
         <div className="flex flex-col items-center mb-6">
-          <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center mb-3">
-            <Leaf className="w-7 h-7 text-white" />
-          </div>
-          <h1 className="text-2xl font-extrabold text-neutral-text">Create account</h1>
-          <p className="text-sm text-gray-500">Start tracking your daily life</p>
+          {/* 🚀 Updated Logo to match KudiTrack brand */}
+          <img
+            src="/kuditrack-logo.png"
+            alt="KudiTrack Logo"
+            className="w-16 h-16 object-contain mb-3"
+          />
+          <h1 className="text-2xl font-extrabold text-neutral-text">
+            Create account
+          </h1>
+          <p className="text-sm text-gray-500">
+            Start tracking your daily life
+          </p>
         </div>
 
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-5 flex gap-2">
@@ -67,7 +87,9 @@ export default function Register() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Email Address</label>
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Email Address
+            </label>
             <input
               type="email"
               value={email}
@@ -78,7 +100,9 @@ export default function Register() {
             />
           </div>
           <div>
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">First Name</label>
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              First Name
+            </label>
             <input
               type="text"
               value={name}
@@ -89,7 +113,9 @@ export default function Register() {
             />
           </div>
           <div>
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Surname</label>
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Surname
+            </label>
             <input
               type="text"
               value={surname}
@@ -100,7 +126,9 @@ export default function Register() {
             />
           </div>
           <div>
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Username</label>
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Username
+            </label>
             <input
               type="text"
               value={username}
@@ -111,7 +139,9 @@ export default function Register() {
             />
           </div>
           <div>
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Password</label>
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Password
+            </label>
             <input
               type="password"
               value={password}
@@ -123,20 +153,33 @@ export default function Register() {
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg p-3">{error}</div>
+            <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg p-3">
+              {error}
+            </div>
           )}
 
+          {/* 🚀 Updated Button with Loading State */}
           <button
             type="submit"
-            className="w-full py-3 bg-primary text-white font-semibold rounded-xl hover:bg-primary-600 transition-colors"
+            disabled={loading}
+            className="w-full py-3 bg-primary text-white font-semibold rounded-xl hover:bg-primary-600 transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            Create Account
+            {loading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" /> Creating account...
+              </>
+            ) : (
+              "Create Account"
+            )}
           </button>
         </form>
 
         <p className="text-center text-sm text-gray-500 mt-5">
-          Already have an account?{' '}
-          <Link to="/login" className="text-primary font-semibold hover:underline">
+          Already have an account?{" "}
+          <Link
+            to="/login"
+            className="text-primary font-semibold hover:underline"
+          >
             Log in
           </Link>
         </p>

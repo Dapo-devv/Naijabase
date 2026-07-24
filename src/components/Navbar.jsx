@@ -26,13 +26,22 @@ export default function Navbar() {
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-gray-200">
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
         
-        {/* --- REPLACED WITH NEW KUDITRACK LOGO --- */}
+        {/* --- KUDITRACK LOGO WITH BUILT-IN FALLBACK --- */}
         <Link to="/" className="flex items-center gap-2 group">
           <img 
             src="/kuditrack-logo.png" 
             alt="KudiTrack Logo" 
-            className="w-9 h-9 object-contain group-hover:scale-105 transition-transform" 
+            className="w-9 h-9 object-contain group-hover:scale-105 transition-transform"
+            onError={(e) => {
+              e.target.style.display = 'none';
+              e.target.nextElementSibling.style.display = 'flex';
+            }}
           />
+          <div 
+            className="hidden w-9 h-9 rounded-xl bg-primary text-white items-center justify-center font-bold text-sm group-hover:scale-105 transition-transform"
+          >
+            KT
+          </div>
           <span className="text-xl font-extrabold text-primary tracking-tight">KudiTrack</span>
         </Link>
 
@@ -40,7 +49,7 @@ export default function Navbar() {
           {loggedIn ? (
             <>
               <Link to="/" className={`${linkBase} ${isActive('/')}`}>Dashboard</Link>
-              <Link to="/market" className={`${linkBase} ${isActive('/market')}`}>Market</Link>
+              <Link to="/market" className={`${linkBase} ${isActive('/market')}`}>Expenses</Link> {/* <--- CHANGED TO EXPENSES */}
               <Link to="/finance" className={`${linkBase} ${isActive('/finance')}`}>Finance</Link>
               <Link to="/trip" className={`${linkBase} ${isActive('/trip')}`}>Trip</Link>
               <Link to="/savings" className={`${linkBase} ${isActive('/savings')}`}>Savings</Link>
