@@ -23,13 +23,27 @@
       src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7558079834807001"
       crossorigin="anonymous"
     ></script>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
 
-    <!-- 🚨 FINAL BRUTE-FORCE FIX FOR BLOG TEXT COLOR IN DARK MODE -->
-    <!-- This sits in index.html, so it overrides ALL CSS files. -->
+    <!-- 🚨 BRUTE-FORCE FIX FOR MOBILE OVERSCROLL & NOTCH -->
+    <style>
+      /* KILLS THE RUBBER-BANDING BOUNCE ON MOBILE */
+      html,
+      body,
+      #root {
+        overscroll-behavior: none !important;
+        -webkit-overflow-scrolling: touch;
+        background-color: #f8f9fa; /* Light Mode Background */
+      }
+
+      /* Makes sure Dark Mode background stays consistent */
+      .dark html,
+      .dark body,
+      .dark #root {
+        background-color: #111827;
+      }
+    </style>
+
+    <!-- 🚨 BRUTE-FORCE FIX FOR BLOG TEXT COLOR IN DARK MODE -->
     <style>
       /* 1. Kills the default gray text on every single element inside the blog post */
       .dark .prose-naija-dark * {
@@ -63,5 +77,9 @@
         color: #e5e7eb !important;
       }
     </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
