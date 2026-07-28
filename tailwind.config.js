@@ -59,6 +59,13 @@ export default {
           "50%": { opacity: "0.6" },
         },
       },
+      // 🚀 ADDED THIS SECTION FOR MOBILE NOTCH SAFETY:
+      padding: {
+        safe: "env(safe-area-inset-top) env(safe-area-inset-bottom)",
+      },
+      margin: {
+        safe: "env(safe-area-inset-top) env(safe-area-inset-bottom)",
+      },
     },
   },
   plugins: [],
