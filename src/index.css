@@ -102,3 +102,80 @@ input[type='number'] {
   color: #0A8C4A;
   text-decoration: underline;
 }
+
+/* --- Dark Mode Overrides --- */
+.dark body {
+  background-color: #111827;
+  color: #f3f4f6;
+}
+.dark .bg-white {
+  background-color: #1f2937;
+}
+.dark .bg-gray-50 {
+  background-color: #374151;
+}
+.dark .bg-gray-100 {
+  background-color: #374151;
+}
+.dark .bg-gray-200 {
+  background-color: #4b5563;
+}
+.dark .border-gray-100,
+.dark .border-gray-200 {
+  border-color: #374151;
+}
+.dark .text-gray-500,
+.dark .text-gray-600,
+.dark .text-gray-700 {
+  color: #9ca3af;
+}
+.dark .text-neutral-text {
+  color: #f9fafb;
+}
+.dark .bg-amber-50 {
+  background-color: #451a03;
+}
+.dark .border-amber-200 {
+  border-color: #78350f;
+}
+.dark .text-amber-700 {
+  color: #fbbf24;
+}
+.dark .bg-green-50 {
+  background-color: #064e3b;
+}
+.dark .border-green-200 {
+  border-color: #047857;
+}
+.dark .bg-red-50 {
+  background-color: #7f1d1d;
+}
+.dark .border-red-200 {
+  border-color: #991b1b;
+}
+.dark .shadow-sm, .dark .shadow-md, .dark .shadow-lg {
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+}
+/* --- Dark Mode Overrides for Markdown (prose-naija) --- */
+.dark .prose-naija-dark p {
+  color: #d1d5db; /* gray-300 */
+}
+.dark .prose-naija-dark h2 {
+  color: #4ade80; /* green-400 */
+}
+.dark .prose-naija-dark h3 {
+  color: #22c55e; /* green-500 */
+}
+.dark .prose-naija-dark ul, .dark .prose-naija-dark ol {
+  color: #d1d5db;
+}
+.dark .prose-naija-dark strong {
+  color: #f3f4f6;
+}
+.dark .prose-naija-dark blockquote {
+  border-left-color: #22c55e;
+  color: #9ca3af;
+}
+.dark .prose-naija-dark a {
+  color: #4ade80;
+}

@@ -13,4 +13,16 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.error("Then restart the dev server.");
 }
 
-export const supabase = createClient(supabaseUrl || "", supabaseAnonKey || "");
+// Create the Supabase client with additional options
+export const supabase = createClient(supabaseUrl || "", supabaseAnonKey || "", {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+  },
+  global: {
+    headers: {
+      "x-application-name": "kuditrack",
+    },
+  },
+});

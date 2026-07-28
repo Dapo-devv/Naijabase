@@ -1,19 +1,27 @@
-import { COUNTRIES, getRegionsForCountry } from '../utils/constants';
+import { COUNTRIES, getRegionsForCountry } from "../utils/constants";
 
-export default function TripStateSelector({ country, setCountry, region, setRegion, label }) {
+export default function TripStateSelector({
+  country,
+  setCountry,
+  region,
+  setRegion,
+  label,
+}) {
   const regions = getRegionsForCountry(country);
 
   return (
     <div className="space-y-2">
-      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{label}</label>
+      <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+        {label}
+      </label>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <select
           value={country}
           onChange={(e) => {
             setCountry(e.target.value);
-            setRegion('');
+            setRegion("");
           }}
-          className="px-3 py-2.5 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+          className="px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
         >
           {COUNTRIES.map((c) => (
             <option key={c} value={c}>
@@ -26,7 +34,7 @@ export default function TripStateSelector({ country, setCountry, region, setRegi
           <select
             value={region}
             onChange={(e) => setRegion(e.target.value)}
-            className="px-3 py-2.5 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+            className="px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
           >
             <option value="">Select region…</option>
             {regions.map((r) => (
@@ -41,7 +49,7 @@ export default function TripStateSelector({ country, setCountry, region, setRegi
             value={region}
             onChange={(e) => setRegion(e.target.value)}
             placeholder="Enter state/region"
-            className="px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+            className="px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
           />
         )}
       </div>

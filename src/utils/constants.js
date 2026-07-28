@@ -16,8 +16,36 @@ export function todayISO() {
 
 export function formatDate(iso) {
   if (!iso) return "";
-  const d = new Date(iso + "T00:00:00");
-  return d.toLocaleDateString("en-NG", {
+
+  // 🚀 FIX: Handle different date formats
+  let date;
+
+  // If it's a full ISO string with time, parse it properly
+  if (iso.includes("T")) {
+    date = new Date(iso);
+  } else {
+    // If it's just a date string, treat it as UTC
+    const parts = iso.split("-");
+    if (parts.length === 3) {
+      // Create date in local timezone but interpret as UTC
+      date = new Date(
+        Date.UTC(
+          parseInt(parts[0]),
+          parseInt(parts[1]) - 1,
+          parseInt(parts[2]),
+        ),
+      );
+    } else {
+      date = new Date(iso);
+    }
+  }
+
+  // Check if date is valid
+  if (isNaN(date.getTime())) {
+    return "Invalid date";
+  }
+
+  return date.toLocaleDateString("en-NG", {
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -36,13 +64,14 @@ export function getFreshUserData() {
     username: "",
     name: "",
     surname: "",
+    profilePicture: "", // 🚀 Store Base64 image
+    theme: "light", // 🚀 Store user theme preference
     marketItems: ["Rice", "Beans", "Garri", "Tomatoes", "Oil"],
     marketLogs: [],
     generator: {
       fuelCostPerLiter: "",
       consumptionRate: "",
       appliances: { ac: false, fridge: false, tv: false, lights: false },
-      // --- Utilities Fields ---
       utilities: {
         electricity: 0,
         cableTV: 0,
@@ -50,22 +79,19 @@ export function getFreshUserData() {
         water: 0,
         waste: 0,
       },
-      // --- Daily Life fields ---
       dailyTransport: 0,
       dailyFood: 0,
       dailyData: 0,
       dailyMisc: 0,
-      // --- Business fields ---
       bizRevenue: 0,
       bizMaterials: 0,
       bizLogistics: 0,
       bizStaff: 0,
       bizRent: 0,
       bizMarketing: 0,
-
-      // --- 🚀 NEW: Finance History Ledger ---
       financeLogs: [],
       transactions: [],
+      businessEntries: [],
     },
     trips: [],
     savings: {

@@ -24,7 +24,9 @@ export default function BottomNav() {
       <Link
         to={to}
         className={`flex flex-col items-center justify-center gap-0.5 py-2 px-1 flex-1 min-w-0 transition-colors ${
-          active ? "text-primary" : "text-gray-500"
+          active
+            ? "text-primary dark:text-primary-400"
+            : "text-gray-500 dark:text-gray-400"
         }`}
       >
         <Icon
@@ -37,10 +39,9 @@ export default function BottomNav() {
 
   if (loggedIn) {
     return (
-      <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 flex z-40 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
+      <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white dark:bg-gray-900/95 border-t border-gray-200 dark:border-gray-800 flex z-40 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] transition-colors duration-300">
         {tab("/", "Home", Home)}
-        {tab("/market", "Expenses", ShoppingCart)}{" "}
-        {/* <--- CHANGED TO EXPENSES */}
+        {tab("/market", "Expenses", ShoppingCart)}
         {tab("/finance", "Finance", Zap)}
         {tab("/trip", "Trip", MapPin)}
         {tab("/savings", "Save", PiggyBank)}
@@ -49,7 +50,7 @@ export default function BottomNav() {
     );
   }
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 flex z-40">
+    <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white dark:bg-gray-900/95 border-t border-gray-200 dark:border-gray-800 flex z-40 transition-colors duration-300">
       {tab("/blog", "Blog", BookOpen)}
       {tab("/login", "Login", LogIn)}
       {tab("/register", "Register", UserPlus)}
