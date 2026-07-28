@@ -140,12 +140,20 @@ export default function Navbar() {
         <div className="flex items-center gap-2 md:hidden">
           {loggedIn ? (
             <>
-              {/* 🔥 Mobile Profile Icon - TAKES YOU TO PROFILE PAGE */}
+              {/* 🔥 Mobile Profile Icon - Shows profile picture if available, takes user to Profile page */}
               <Link
                 to="/profile"
-                className="w-9 h-9 rounded-full bg-primary-50 dark:bg-primary-900/30 text-primary dark:text-primary-400 flex items-center justify-center border border-primary-200 dark:border-primary-800 hover:bg-primary-100 dark:hover:bg-primary-900/50 transition-colors"
+                className="w-9 h-9 rounded-full bg-primary-50 dark:bg-primary-900/30 border border-primary-200 dark:border-primary-800 flex items-center justify-center overflow-hidden hover:opacity-80 transition-opacity"
               >
-                <User className="w-5 h-5" />
+                {currentUser?.profilePicture ? (
+                  <img
+                    src={currentUser.profilePicture}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <User className="w-5 h-5 text-primary dark:text-primary-400" />
+                )}
               </Link>
 
               {/* Mobile Hamburger Menu */}
