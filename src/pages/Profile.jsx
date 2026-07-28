@@ -12,6 +12,10 @@ import {
   Sun,
   Camera,
   Save,
+  MessageCircle,
+  Mail,
+  Send,
+  Instagram, // 🚀 FIXED: Added this missing import
 } from "lucide-react";
 import { useNaijaBase } from "../context/NaijaBaseContext";
 import { todayISO } from "../utils/constants";
@@ -29,7 +33,12 @@ export default function Profile() {
   const [msg, setMsg] = useState(null);
   const [isEditingTheme, setIsEditingTheme] = useState(false);
   const [tempTheme, setTempTheme] = useState(currentUser?.theme || "light");
-  const [isDeleting, setIsDeleting] = useState(false);
+
+  // --- Contact Form State ---
+  const [contactName, setContactName] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactMessage, setContactMessage] = useState("");
+  const [isSending, setIsSending] = useState(false);
 
   if (!currentUser) return null;
 
@@ -38,35 +47,23 @@ export default function Profile() {
     navigate("/login");
   };
 
-  // 🚀 FIX: Proper account deletion with loading state
   const handleDelete = async () => {
     if (
       !window.confirm(
         "Delete your account and all data? This cannot be undone.\n\n" +
-          "This will permanently remove:\n" +
-          "• Your account credentials\n" +
-          "• All your saved data (market logs, trips, savings, etc.)",
+        "This will permanently remove:\n" +
+        "• Your account credentials\n" +
+        "• All your saved data (market logs, trips, savings, etc.)"
       )
     ) {
       return;
     }
-
-    setIsDeleting(true);
     const result = await deleteAccount();
-    setIsDeleting(false);
-
     if (!result.ok) {
-      setMsg({
-        type: "error",
-        text: result.error || "Failed to delete account. Please try again.",
-      });
+      setMsg({ type: "error", text: result.error || "Failed to delete account. Please try again." });
       return;
     }
-
-    setMsg({
-      type: "success",
-      text: result.message || "Account deleted successfully.",
-    });
+    setMsg({ type: "success", text: result.message || "Account deleted successfully." });
     setTimeout(() => {
       navigate("/login");
     }, 1500);
@@ -153,6 +150,29 @@ export default function Profile() {
     setTimeout(() => setMsg(null), 3000);
   };
 
+  // Contact Form Handler
+  const handleContactSubmit = (e) => {
+    e.preventDefault();
+    setIsSending(true);
+
+    // Prepare the email content
+    const subject = encodeURIComponent(`KudiTrack Support: ${contactName}`);
+    const body = encodeURIComponent(
+      `Name: ${contactName}\nEmail: ${contactEmail}\n\nMessage:\n${contactMessage}`
+    );
+
+    // Open the user's default email client
+    window.location.href = `mailto:dapodevv@gmail.com?subject=${subject}&body=${body}`;
+
+    // Reset form
+    setContactName("");
+    setContactEmail("");
+    setContactMessage("");
+    setIsSending(false);
+    setMsg({ type: "success", text: "Email opened in your default mail app!" });
+    setTimeout(() => setMsg(null), 3000);
+  };
+
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 animate-fade-in space-y-8">
       {/* --- Profile Header --- */}
@@ -205,11 +225,9 @@ export default function Profile() {
             </button>
             <button
               onClick={handleDelete}
-              disabled={isDeleting}
-              className="flex items-center justify-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors"
             >
-              <Trash2 className="w-4 h-4" />{" "}
-              {isDeleting ? "Deleting..." : "Delete"}
+              <Trash2 className="w-4 h-4" /> Delete
             </button>
           </div>
         </div>
@@ -218,8 +236,7 @@ export default function Profile() {
       {/* --- Theme Settings --- */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
         <h3 className="text-lg font-bold text-neutral-text dark:text-white mb-4 flex items-center gap-2">
-          <Moon className="w-5 h-5 text-primary dark:text-primary-400" />{" "}
-          Appearance
+          <Moon className="w-5 h-5 text-primary dark:text-primary-400" /> Appearance
         </h3>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-3 flex-1">
@@ -299,8 +316,8 @@ export default function Profile() {
         {msg && (
           <div
             className={`flex items-center gap-2 p-3 rounded-xl text-sm ${
-              msg.type === "success"
-                ? "bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400"
+              msg.type === "success" 
+                ? "bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400" 
                 : "bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400"
             }`}
           >
@@ -312,6 +329,89 @@ export default function Profile() {
             {msg.text}
           </div>
         )}
+      </div>
+
+      {/* --- Contact & Support (NEW) --- */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <h3 className="text-lg font-bold text-neutral-text dark:text-white mb-4 flex items-center gap-2">
+          <MessageCircle className="w-5 h-5 text-primary dark:text-primary-400" /> Contact & Support
+        </h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">
+          Have a question, feedback, or need help? Reach out to us!
+        </p>
+        
+        <div className="space-y-4">
+          {/* Instagram Direct Link */}
+          <a
+            href="https://www.instagram.com/kudi.track"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-between p-4 bg-gradient-to-r from-pink-500 to-purple-600 rounded-xl text-white hover:opacity-90 transition-opacity"
+          >
+            <div className="flex items-center gap-3">
+              <Instagram className="w-5 h-5" />
+              <span className="font-medium">Chat with us on Instagram</span>
+            </div>
+            <span className="text-xs bg-white/20 px-2 py-1 rounded-full">@kudi.track</span>
+          </a>
+
+          {/* Email Form */}
+          <div className="mt-4 border-t border-gray-100 dark:border-gray-700 pt-4">
+            <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+              <Mail className="w-4 h-4" /> Send us an Email
+            </h4>
+            <form onSubmit={handleContactSubmit} className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                    Your Name
+                  </label>
+                  <input
+                    type="text"
+                    value={contactName}
+                    onChange={(e) => setContactName(e.target.value)}
+                    required
+                    className="mt-1 w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                    placeholder="John Doe"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                    Your Email
+                  </label>
+                  <input
+                    type="email"
+                    value={contactEmail}
+                    onChange={(e) => setContactEmail(e.target.value)}
+                    required
+                    className="mt-1 w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                    placeholder="you@example.com"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                  Message
+                </label>
+                <textarea
+                  value={contactMessage}
+                  onChange={(e) => setContactMessage(e.target.value)}
+                  required
+                  rows={3}
+                  className="mt-1 w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                  placeholder="How can we help you?"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={isSending}
+                className="w-full flex items-center justify-center gap-2 py-2.5 bg-primary text-white dark:text-white font-semibold rounded-lg hover:bg-primary-600 dark:hover:bg-primary-500 transition-colors disabled:opacity-70"
+              >
+                <Send className="w-4 h-4" /> {isSending ? "Opening Email..." : "Send Message via Email"}
+              </button>
+            </form>
+          </div>
+        </div>
       </div>
     </div>
   );
