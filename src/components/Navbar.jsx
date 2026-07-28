@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -11,6 +12,8 @@ import {
   UserPlus,
   LogOut,
   Shield,
+  Menu,
+  X,
 } from "lucide-react";
 import { useNaijaBase } from "../context/NaijaBaseContext";
 
@@ -19,6 +22,7 @@ export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const loggedIn = state.currentUserId != null;
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const ADMIN_EMAIL = "dapodevv@gmail.com";
   const isAdmin = currentUser?.email === ADMIN_EMAIL;
@@ -26,9 +30,9 @@ export default function Navbar() {
   const handleLogout = () => {
     logout();
     navigate("/login");
+    setMobileMenuOpen(false);
   };
 
-  // 🚀 FIXED: Added dark mode classes to all styles
   const linkBase =
     "px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200";
   const active =
@@ -39,10 +43,9 @@ export default function Navbar() {
   const isActive = (path) => (location.pathname === path ? active : idle);
 
   return (
-    // 🚀 FIXED: Added dark mode classes to header
     <header className="sticky top-0 z-40 bg-white/95 dark:bg-gray-900/95 backdrop-blur border-b border-gray-200 dark:border-gray-800 transition-colors duration-300">
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-        {/* --- KUDITRACK LOGO WITH BUILT-IN FALLBACK --- */}
+        {/* --- KUDITRACK LOGO --- */}
         <Link to="/" className="flex items-center gap-2 group">
           <img
             src="/kuditrack-logo.png"
@@ -56,12 +59,12 @@ export default function Navbar() {
           <div className="hidden w-9 h-9 rounded-xl bg-primary text-white items-center justify-center font-bold text-sm group-hover:scale-105 transition-transform">
             KT
           </div>
-          {/* 🚀 FIXED: Added dark:text-primary-400 */}
-          <span className="text-xl font-extrabold text-primary dark:text-primary-400 tracking-tight">
+          <span className="text-xl font-extrabold text-primary dark:text-primary-400 tracking-tight hidden sm:block">
             KudiTrack
           </span>
         </Link>
 
+        {/* --- DESKTOP NAVIGATION --- */}
         <nav className="hidden md:flex items-center gap-1">
           {loggedIn ? (
             <>
@@ -100,7 +103,6 @@ export default function Navbar() {
               </Link>
 
               {isAdmin && (
-                // 🚀 FIXED: Added dark mode classes to admin link
                 <Link
                   to="/admin"
                   className={`${linkBase} ${isActive("/admin")} text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 border border-red-200 dark:border-red-800`}
@@ -109,7 +111,6 @@ export default function Navbar() {
                 </Link>
               )}
 
-              {/* 🚀 FIXED: Added dark mode classes to logout button */}
               <button
                 onClick={handleLogout}
                 className={`${linkBase} text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center gap-1.5`}
@@ -134,7 +135,114 @@ export default function Navbar() {
             </>
           )}
         </nav>
+
+        {/* --- MOBILE HEADER ACTIONS --- */}
+        <div className="flex items-center gap-2 md:hidden">
+          {loggedIn ? (
+            <>
+              {/* 🔥 Mobile Profile Icon - TAKES YOU TO PROFILE PAGE */}
+              <Link
+                to="/profile"
+                className="w-9 h-9 rounded-full bg-primary-50 dark:bg-primary-900/30 text-primary dark:text-primary-400 flex items-center justify-center border border-primary-200 dark:border-primary-800 hover:bg-primary-100 dark:hover:bg-primary-900/50 transition-colors"
+              >
+                <User className="w-5 h-5" />
+              </Link>
+
+              {/* Mobile Hamburger Menu */}
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              >
+                {mobileMenuOpen ? (
+                  <X className="w-6 h-6" />
+                ) : (
+                  <Menu className="w-6 h-6" />
+                )}
+              </button>
+            </>
+          ) : (
+            <>
+              <Link
+                to="/login"
+                className="text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-primary-400"
+              >
+                Login
+              </Link>
+              <Link
+                to="/register"
+                className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-primary text-white hover:bg-primary-600 transition-colors"
+              >
+                Register
+              </Link>
+            </>
+          )}
+        </div>
       </div>
+
+      {/* --- MOBILE SIDEBAR MENU (Links) --- */}
+      {mobileMenuOpen && loggedIn && (
+        <div className="md:hidden bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-lg absolute top-16 left-0 w-full z-40 p-4 flex flex-col gap-2 animate-fade-in">
+          <Link
+            to="/"
+            className={`${linkBase} ${isActive("/")}`}
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            Dashboard
+          </Link>
+          <Link
+            to="/market"
+            className={`${linkBase} ${isActive("/market")}`}
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            Expenses
+          </Link>
+          <Link
+            to="/finance"
+            className={`${linkBase} ${isActive("/finance")}`}
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            Finance
+          </Link>
+          <Link
+            to="/trip"
+            className={`${linkBase} ${isActive("/trip")}`}
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            Trip
+          </Link>
+          <Link
+            to="/savings"
+            className={`${linkBase} ${isActive("/savings")}`}
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            Savings
+          </Link>
+          <Link
+            to="/blog"
+            className={`${linkBase} ${isActive("/blog")}`}
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            Blog
+          </Link>
+
+          {isAdmin && (
+            <Link
+              to="/admin"
+              className={`${linkBase} ${isActive("/admin")} text-red-600 dark:text-red-400`}
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <Shield className="w-4 h-4 inline mr-1" /> Admin
+            </Link>
+          )}
+
+          <button
+            onClick={handleLogout}
+            className={`${linkBase} text-red-600 dark:text-red-400 flex items-center gap-1.5 mt-2 border-t border-gray-200 dark:border-gray-700 pt-2`}
+          >
+            <LogOut className="w-4 h-4" /> Logout
+          </button>
+        </div>
+      )}
     </header>
   );
 }
