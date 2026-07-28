@@ -1,87 +1,96 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { naira } from "../utils/constants";
-import { Users, ShoppingCart, TrendingUp, Database } from "lucide-react";
+import {
+  Users,
+  ShoppingCart,
+  TrendingUp,
+  Database,
+  Activity,
+  DollarSign,
+  Target,
+} from "lucide-react";
 import { useNaijaBase } from "../context/NaijaBaseContext";
 
 export default function AdminPanel() {
   const { currentUser } = useNaijaBase();
   const [stats, setStats] = useState({
-    totalUsers: 0,
-    totalMarketLogs: 0,
-    totalSavings: 0,
-    averageRicePrice: 0,
+    total_users: 0,
+    active_users_7d: 0,
+    total_savings: 0,
+    users_with_market_logs: 0,
+    total_market_logs: 0,
+    avg_sale_amount: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // SECURITY: Only allow a specific email to view this page. Change this to YOUR email!
+  // SECURITY: Only allow your specific email
   const ADMIN_EMAIL = "dapodevv@gmail.com";
 
   useEffect(() => {
-    if (!currentUser || currentUser.email !== ADMIN_EMAIL) return;
+    // Security check
+    if (!currentUser || currentUser.email !== ADMIN_EMAIL) {
+      setLoading(false);
+      return;
+    }
 
     const fetchStats = async () => {
-      // Fetch all user data from the user_data table
-      const { data, error } = await supabase.from("user_data").select("data");
+      try {
+        // 🚀 Fetch from the lightning-fast SQL View we just created
+        const { data, error } = await supabase
+          .from("admin_stats")
+          .select("*")
+          .single();
 
-      if (error) {
-        console.error(error);
-        setLoading(false);
-        return;
-      }
+        if (error) throw error;
 
-      let totalLogs = 0;
-      let totalSavingsSum = 0;
-      let ricePrices = [];
-      let totalUsers = data.length;
-
-      data.forEach((row) => {
-        const d = row.data;
-        // Count market logs
-        if (d.marketLogs && Array.isArray(d.marketLogs)) {
-          totalLogs += d.marketLogs.length;
-          // Collect rice prices from every log
-          d.marketLogs.forEach((log) => {
-            if (log.prices && typeof log.prices.Rice === "number") {
-              ricePrices.push(log.prices.Rice);
-            }
+        if (data) {
+          setStats({
+            total_users: data.total_users || 0,
+            active_users_7d: data.active_users_7d || 0,
+            total_savings: data.total_savings || 0,
+            users_with_market_logs: data.users_with_market_logs || 0,
+            total_market_logs: data.total_market_logs || 0,
+            avg_sale_amount: data.avg_sale_amount || 0,
           });
         }
-        // Sum savings
-        if (d.savings && typeof d.savings.savedAmount === "number") {
-          totalSavingsSum += d.savings.savedAmount;
-        }
-      });
-
-      const avgRice =
-        ricePrices.length > 0
-          ? ricePrices.reduce((a, b) => a + b, 0) / ricePrices.length
-          : 0;
-
-      setStats({
-        totalUsers,
-        totalMarketLogs: totalLogs,
-        totalSavings: totalSavingsSum,
-        averageRicePrice: avgRice,
-      });
-      setLoading(false);
+      } catch (err) {
+        console.error("Error fetching admin stats:", err);
+        setError("Failed to load statistics. Please refresh the page.");
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchStats();
   }, [currentUser]);
 
+  // Security Gate
   if (!currentUser || currentUser.email !== ADMIN_EMAIL) {
     return (
       <div className="p-10 text-center text-red-600 dark:text-red-400 bg-white dark:bg-gray-900 min-h-screen">
-        You do not have permission to view the Admin Panel.
+        ⛔ You do not have permission to view the Admin Panel.
       </div>
     );
   }
 
   if (loading) {
     return (
-      <div className="p-10 text-center text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-900 min-h-screen">
-        Loading platform stats...
+      <div className="p-10 text-center text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-900 min-h-screen flex items-center justify-center">
+        <div className="space-y-3">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p>Loading platform intelligence...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-10 text-center text-red-600 dark:text-red-400 bg-white dark:bg-gray-900 min-h-screen">
+        <p className="text-lg font-bold">Oops!</p>
+        <p>{error}</p>
       </div>
     );
   }
@@ -89,28 +98,38 @@ export default function AdminPanel() {
   const cards = [
     {
       label: "Total Registered Users",
-      value: stats.totalUsers,
+      value: stats.total_users,
       icon: Users,
       color: "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400",
     },
     {
-      label: "Total Market Logs",
-      value: stats.totalMarketLogs,
-      icon: ShoppingCart,
+      label: "Active Users (Last 7 Days)",
+      value: stats.active_users_7d,
+      sub: `${stats.total_users > 0 ? Math.round((stats.active_users_7d / stats.total_users) * 100) : 0}% of total`,
+      icon: Activity,
       color:
         "bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400",
     },
     {
-      label: "Total Saved (All Users)",
-      value: naira(stats.totalSavings),
-      icon: TrendingUp,
+      label: "Total Market Logs",
+      value: stats.total_market_logs,
+      sub: `${stats.users_with_market_logs} users actively tracking`,
+      icon: ShoppingCart,
+      color:
+        "bg-orange-50 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400",
+    },
+    {
+      label: "Total Savings (All Users)",
+      value: naira(stats.total_savings),
+      icon: Target,
       color:
         "bg-yellow-50 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400",
     },
     {
-      label: "Avg. Rice Price (All Logs)",
-      value: naira(stats.averageRicePrice),
-      icon: Database,
+      label: "Average Sale Amount",
+      value: naira(stats.avg_sale_amount),
+      sub: "Across all business entries",
+      icon: DollarSign,
       color:
         "bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400",
     },
@@ -118,25 +137,25 @@ export default function AdminPanel() {
 
   return (
     <div className="min-h-screen bg-neutral-bg dark:bg-gray-900 py-6 px-4 transition-colors duration-300">
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-5xl mx-auto space-y-6">
         {/* Header Section */}
         <div>
           <h1 className="text-2xl font-extrabold text-neutral-text dark:text-white">
             Admin Dashboard
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Aggregated overview of all NaijaBase user activity.
+            Real-time aggregated overview of all KudiTrack user activity.
           </p>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {cards.map((c, i) => {
             const Icon = c.icon;
             return (
               <div
                 key={i}
-                className="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm transition-colors duration-300"
+                className="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm transition-colors duration-300 hover:shadow-md"
               >
                 <div
                   className={`w-10 h-10 rounded-xl flex items-center justify-center ${c.color} mb-3`}
@@ -149,9 +168,22 @@ export default function AdminPanel() {
                 <p className="text-xl font-bold text-neutral-text dark:text-white mt-1">
                   {c.value}
                 </p>
+                {c.sub && (
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                    {c.sub}
+                  </p>
+                )}
               </div>
             );
           })}
+        </div>
+
+        {/* System Status Note */}
+        <div className="bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 rounded-xl p-4 text-sm text-primary-700 dark:text-primary-400">
+          <p className="font-semibold">🟢 System Status: Healthy</p>
+          <p className="text-xs opacity-80 mt-1">
+            Data updates in real-time as users interact with the platform.
+          </p>
         </div>
       </div>
     </div>
