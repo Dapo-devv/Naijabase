@@ -67,7 +67,7 @@ function ThemeManager() {
     }
   }, [currentUser?.theme]);
 
-  return null; 
+  return null;
 }
 
 export default function App() {
@@ -76,11 +76,9 @@ export default function App() {
       <NaijaBaseProvider>
         <ThemeManager />
 
-        {/* 🛡️ FIX: Added flex-col, min-h-screen, and bg colors for mobile overscroll */}
         <div className="min-h-screen bg-neutral-bg dark:bg-gray-900 flex flex-col transition-colors duration-300">
           <Navbar />
-          
-          {/* 🛡️ FIX: Added pt-safe and pb-safe for mobile notches/gesture bars */}
+
           <main className="flex-1 pt-safe pb-safe w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <Routes>
               <Route path="/login" element={<Login />} />
@@ -156,19 +154,22 @@ export default function App() {
             </Routes>
           </main>
 
-          <div className="md:hidden fixed bottom-14 left-0 w-full z-30 px-2">
-            <AdSlot
-              width={320}
-              height={50}
-              label="Ad Space"
-              className="!py-2"
-            />
+          {/* 🚀 FIX: Static Mobile Ad (Doesn't overlay social links) */}
+          <div className="md:hidden w-full flex justify-center px-4 pb-4 bg-neutral-bg dark:bg-gray-900 transition-colors duration-300">
+            <div className="w-full max-w-[350px]">
+              <AdSlot
+                width={320}
+                height={50}
+                label="Ad Space"
+                className="!py-2 w-full"
+              />
+            </div>
           </div>
 
           <BottomNav />
 
-          {/* 🛡️ FIX: Added mt-auto to push footer to the bottom on tall screens */}
-          <footer className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 py-6 mt-8 md:mt-12 mt-auto transition-colors duration-300">
+          {/* 🚀 FIXED: Removed 'mt-8' to resolve Tailwind conflict. Kept only 'mt-auto'. */}
+          <footer className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 py-6 mt-auto transition-colors duration-300">
             <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 © {new Date().getFullYear()}{" "}
@@ -179,7 +180,7 @@ export default function App() {
               </p>
               <div className="flex items-center gap-5">
                 <a
-                  href="https://www.instagram.com/naijabase9"
+                  href="https://www.instagram.com/kudi.track"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-gray-400 hover:text-primary transition-colors"
@@ -188,7 +189,7 @@ export default function App() {
                   <Instagram className="w-5 h-5" />
                 </a>
                 <a
-                  href="https://x.com/naijabase9"
+                  href="https://x.com/kuditracknaija"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-gray-400 hover:text-primary transition-colors"
@@ -197,7 +198,7 @@ export default function App() {
                   <Twitter className="w-5 h-5" />
                 </a>
                 <a
-                  href="https://kuditrack.com.ng"
+                  href="https://kuditrack.space"
                   className="text-sm font-medium text-primary hover:underline"
                 >
                   Visit App
