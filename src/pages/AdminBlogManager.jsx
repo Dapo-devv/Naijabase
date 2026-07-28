@@ -1,332 +1,241 @@
-import React, { useState, useEffect, useRef } from "react";
-import {
-  ShoppingCart,
-  Save,
-  Pencil,
-  Calendar,
-  Trash2,
-  Eye,
-  X,
-} from "lucide-react";
-import AdSlot from "../components/AdSlot";
-import MarketItemList from "../components/MarketItemList";
-import MarketChart from "../components/MarketChart";
-import { useNaijaBase } from "../context/NaijaBaseContext";
-import { formatDate, naira } from "../utils/constants";
+import React, { useState, useEffect } from "react";
+import { supabase } from "../lib/supabase";
+import { useNavigate } from "react-router-dom";
+import { BookOpen, Save, Trash2, Pencil, Plus, X } from "lucide-react";
 
-export default function MarketPage() {
-  const { currentUser, updateUserData } = useNaijaBase();
-  const data = currentUser?.data;
+export default function AdminBlogManager() {
+  const navigate = useNavigate();
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [editingPost, setEditingPost] = useState(null);
 
-  const [editingId, setEditingId] = useState(null);
-  const [viewingLog, setViewingLog] = useState(null);
-  const [prices, setPrices] = useState({});
-  const [saved, setSaved] = useState(false);
+  // Form state
+  const [title, setTitle] = useState("");
+  const [slug, setSlug] = useState("");
+  const [excerpt, setExcerpt] = useState("");
+  const [content, setContent] = useState("");
+  const [tag, setTag] = useState("");
 
-  const justSavedRef = useRef(false);
-  const hasLoadedRef = useRef(false);
-
-  if (!data) return null;
-
+  // Fetch posts
   useEffect(() => {
-    if (justSavedRef.current) return;
+    fetchPosts();
+  }, []);
 
-    if (editingId) {
-      const log = data.marketLogs.find((l) => l.id === editingId);
-      if (log) {
-        const loadedPrices = {};
-        data.marketItems.forEach((it) => {
-          loadedPrices[it] = log.prices?.[it] ?? "";
-        });
-        setPrices(loadedPrices);
-      }
-    } else {
-      if (!hasLoadedRef.current) {
-        const cleared = {};
-        data.marketItems.forEach((it) => {
-          cleared[it] = "";
-        });
-        setPrices(cleared);
-        hasLoadedRef.current = true;
-      }
-    }
-  }, [data.marketItems, editingId, data.marketLogs]);
+  const fetchPosts = async () => {
+    const { data, error } = await supabase
+      .from("blog_posts")
+      .select("*")
+      .order("published_at", { ascending: false });
 
-  const handlePriceChange = (item, val) => {
-    setPrices((p) => ({ ...p, [item]: val }));
-    setSaved(false);
+    if (error) console.error("Error fetching posts:", error);
+    else setPosts(data || []);
+    setLoading(false);
   };
 
-  const handleAddItem = (name) => {
-    if (data.marketItems.includes(name)) return;
-    updateUserData((d) => ({
-      ...d,
-      marketItems: [...d.marketItems, name],
-    }));
-    setPrices((p) => ({ ...p, [name]: "" }));
-  };
-
-  const handleRemoveItem = (name) => {
-    updateUserData((d) => ({
-      ...d,
-      marketItems: d.marketItems.filter((i) => i !== name),
-    }));
-    setPrices((p) => {
-      const copy = { ...p };
-      delete copy[name];
-      return copy;
-    });
-  };
-
-  const handleLog = () => {
-    const hasData = data.marketItems.some(
-      (item) => parseFloat(prices[item]) > 0,
-    );
-    if (!hasData) {
-      alert("Please enter at least one expense before saving.");
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!title || !slug || !content) {
+      alert("Please fill in Title, Slug, and Content.");
       return;
     }
 
-    const pricesObj = {};
-    data.marketItems.forEach((it) => {
-      const v = parseFloat(prices[it]);
-      pricesObj[it] = isNaN(v) ? 0 : v;
-    });
-
-    const newLog = {
-      id: Date.now(),
-      date: new Date().toISOString(),
-      prices: pricesObj,
+    const postData = {
+      title,
+      slug,
+      excerpt,
+      content,
+      tag: tag || "General",
+      published_at: new Date().toISOString(),
     };
 
-    updateUserData((d) => ({
-      ...d,
-      marketLogs: [...d.marketLogs, newLog],
-    }));
+    if (editingPost) {
+      // Update existing post
+      const { error } = await supabase
+        .from("blog_posts")
+        .update(postData)
+        .eq("id", editingPost.id);
 
-    justSavedRef.current = true;
-    setSaved(true);
-    setEditingId(null);
+      if (error) console.error("Error updating post:", error);
+    } else {
+      // Create new post
+      const { error } = await supabase.from("blog_posts").insert(postData);
 
-    const cleared = {};
-    data.marketItems.forEach((it) => {
-      cleared[it] = "";
-    });
-    setPrices(cleared);
-
-    setTimeout(() => {
-      justSavedRef.current = false;
-      setSaved(false);
-    }, 2500);
-  };
-
-  const handleEdit = (id) => {
-    const log = data.marketLogs.find((l) => l.id === id);
-    if (!log) return;
-    setEditingId(id);
-    setViewingLog(null);
-    justSavedRef.current = false;
-  };
-
-  const handleDeleteLog = (id) => {
-    if (!window.confirm(`Delete this expense log?`)) return;
-    updateUserData((d) => ({
-      ...d,
-      marketLogs: d.marketLogs.filter((l) => l.id !== id),
-    }));
-    if (editingId === id) {
-      setEditingId(null);
-      const cleared = {};
-      data.marketItems.forEach((it) => {
-        cleared[it] = "";
-      });
-      setPrices(cleared);
+      if (error) console.error("Error creating post:", error);
     }
-    setViewingLog(null);
+
+    resetForm();
+    fetchPosts();
   };
 
-  const isEditing = !!editingId;
-  const sortedLogs = [...data.marketLogs].sort((a, b) => {
-    if (a.date !== b.date) return b.date.localeCompare(a.date);
-    return (b.id || 0) - (a.id || 0);
-  });
+  const handleEdit = (post) => {
+    setEditingPost(post);
+    setTitle(post.title);
+    setSlug(post.slug);
+    setExcerpt(post.excerpt || "");
+    setContent(post.content);
+    setTag(post.tag || "General");
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this post?")) return;
+    const { error } = await supabase.from("blog_posts").delete().eq("id", id);
+    if (error) console.error("Error deleting post:", error);
+    else fetchPosts();
+  };
+
+  const resetForm = () => {
+    setEditingPost(null);
+    setTitle("");
+    setSlug("");
+    setExcerpt("");
+    setContent("");
+    setTag("");
+  };
 
   return (
-    <div className="min-h-screen bg-neutral-bg dark:bg-gray-900 py-6 px-4 transition-colors duration-300">
-      <div className="max-w-4xl mx-auto space-y-8">
-        {/* Page Header */}
-        <div>
-          <h1 className="text-2xl font-extrabold text-neutral-text dark:text-white flex items-center gap-2">
-            <ShoppingCart className="w-6 h-6 text-primary" /> Daily Expense
-            Tracker
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Log exactly how much you spent on each item today.
-          </p>
-        </div>
+    <div className="max-w-4xl mx-auto px-4 py-8 animate-fade-in">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-extrabold text-neutral-text dark:text-white flex items-center gap-2">
+          <BookOpen className="w-6 h-6 text-primary" /> Manage Blog Posts
+        </h1>
+        <button
+          onClick={() => navigate("/blog")}
+          className="text-sm text-gray-500 hover:text-primary transition-colors"
+        >
+          ← View Blog
+        </button>
+      </div>
 
-        {/* Input Section */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 transition-colors duration-300">
-          {isEditing && (
-            <div className="mb-4 flex items-center gap-2 text-sm text-secondary-600 bg-secondary-50 dark:bg-secondary-900/30 px-3 py-2 rounded-lg border border-secondary-200 dark:border-secondary-800">
-              <Pencil className="w-4 h-4" /> Editing this expense log
+      {/* Form */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-8">
+        <h2 className="text-lg font-bold text-neutral-text dark:text-white mb-4">
+          {editingPost ? "Edit Post" : "Create New Post"}
+        </h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                Title
+              </label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="mt-1 w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                required
+              />
             </div>
-          )}
-          <MarketItemList
-            items={data.marketItems}
-            prices={prices}
-            onPriceChange={handlePriceChange}
-            onAddItem={handleAddItem}
-            onRemoveItem={handleRemoveItem}
-          />
-          <button
-            onClick={handleLog}
-            className="mt-4 w-full flex items-center justify-center gap-2 py-3 bg-primary text-white font-semibold rounded-xl hover:bg-primary-600 transition-colors"
-          >
-            <Save className="w-5 h-5" />
-            {isEditing ? "Update Log" : "Log Today's Expenses"}
-          </button>
-          {saved && (
-            <p className="text-center text-sm text-green-600 dark:text-green-400 mt-2 animate-fade-in">
-              New expense log added!
-            </p>
-          )}
-        </div>
-
-        <AdSlot width={300} height={250} />
-
-        {/* Chart Section */}
-        <div className="w-full overflow-x-auto">
-          <MarketChart logs={data.marketLogs} items={data.marketItems} />
-        </div>
-
-        {/* Past Logs Section */}
-        <div>
-          <h2 className="text-lg font-bold text-neutral-text dark:text-white flex items-center gap-2 mb-4">
-            <Calendar className="w-5 h-5 text-primary" /> Past Expense Logs
-          </h2>
-          {sortedLogs.length === 0 ? (
-            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-8 text-center text-gray-400 dark:text-gray-500 border border-dashed border-gray-300 dark:border-gray-700">
-              <p className="text-sm">
-                No logs yet. Log your first daily expenses above!
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {sortedLogs.map((log) => {
-                const dailyTotal = Object.values(log.prices).reduce(
-                  (sum, val) => sum + (val || 0),
-                  0,
-                );
-                return (
-                  <div
-                    key={log.id}
-                    className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm hover:shadow-md transition-all duration-300"
-                  >
-                    <div className="flex-1">
-                      <p className="font-semibold text-neutral-text dark:text-white">
-                        {formatDate(log.date)}
-                      </p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {Object.keys(log.prices).length} items bought · Total
-                        spent: {naira(dailyTotal)}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setViewingLog(log)}
-                        className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 dark:bg-blue-900/30 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-lg transition-colors"
-                      >
-                        <Eye className="w-3.5 h-3.5" /> View
-                      </button>
-                      <button
-                        onClick={() => handleEdit(log.id)}
-                        className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-primary bg-primary-50 dark:bg-primary-900/30 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-primary-900/50 rounded-lg transition-colors"
-                      >
-                        <Pencil className="w-3.5 h-3.5" /> Edit
-                      </button>
-                      <button
-                        onClick={() => handleDeleteLog(log.id)}
-                        className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-red-600 bg-red-50 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-lg transition-colors"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" /> Delete
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* View Log Modal */}
-        {viewingLog && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/80 p-4 backdrop-blur-sm animate-fade-in">
-            <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700">
-              <div className="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="text-lg font-bold text-neutral-text dark:text-white">
-                  Expense Details
-                </h3>
-                <button
-                  onClick={() => setViewingLog(null)}
-                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-                </button>
-              </div>
-              <div className="p-5 space-y-4">
-                <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-900/50 rounded-xl p-3">
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
-                    Date
-                  </span>
-                  <span className="font-semibold text-neutral-text dark:text-white">
-                    {formatDate(viewingLog.date)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center bg-primary-50 dark:bg-primary-900/30 rounded-xl p-3">
-                  <span className="text-sm text-primary-600 dark:text-primary-400">
-                    Total Spent
-                  </span>
-                  <span className="font-bold text-primary text-lg">
-                    {naira(
-                      Object.values(viewingLog.prices).reduce(
-                        (a, b) => a + b,
-                        0,
-                      ),
-                    )}
-                  </span>
-                </div>
-                <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
-                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
-                    Purchase Breakdown
-                  </p>
-                  <div className="space-y-1.5">
-                    {Object.entries(viewingLog.prices).map(([item, price]) => (
-                      <div
-                        key={item}
-                        className="flex justify-between text-sm py-1 border-b border-gray-50 dark:border-gray-700/50 last:border-0"
-                      >
-                        <span className="text-gray-700 dark:text-gray-300">
-                          {item}
-                        </span>
-                        <span className="font-medium text-gray-900 dark:text-white">
-                          {naira(price)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 text-center">
-                <button
-                  onClick={() => setViewingLog(null)}
-                  className="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-                >
-                  Close
-                </button>
-              </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                Slug (URL)
+              </label>
+              <input
+                type="text"
+                value={slug}
+                onChange={(e) =>
+                  setSlug(e.target.value.toLowerCase().replace(/ /g, "-"))
+                }
+                className="mt-1 w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                required
+              />
             </div>
           </div>
+          <div>
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Tag
+            </label>
+            <input
+              type="text"
+              value={tag}
+              onChange={(e) => setTag(e.target.value)}
+              className="mt-1 w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Excerpt (Summary)
+            </label>
+            <textarea
+              value={excerpt}
+              onChange={(e) => setExcerpt(e.target.value)}
+              rows={2}
+              className="mt-1 w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Content (Markdown)
+            </label>
+            <textarea
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              rows={8}
+              className="mt-1 w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-mono"
+              required
+            />
+          </div>
+          <div className="flex gap-3">
+            <button
+              type="submit"
+              className="flex-1 py-2.5 bg-primary text-white font-semibold rounded-lg hover:bg-primary-600 transition-colors flex items-center justify-center gap-2"
+            >
+              <Save className="w-4 h-4" />{" "}
+              {editingPost ? "Update Post" : "Publish Post"}
+            </button>
+            {editingPost && (
+              <button
+                type="button"
+                onClick={resetForm}
+                className="py-2.5 px-6 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+        </form>
+      </div>
+
+      {/* Posts List */}
+      <div className="space-y-3">
+        {loading ? (
+          <p className="text-center text-gray-500">Loading posts...</p>
+        ) : posts.length === 0 ? (
+          <p className="text-center text-gray-400">
+            No posts yet. Write your first one!
+          </p>
+        ) : (
+          posts.map((post) => (
+            <div
+              key={post.id}
+              className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm"
+            >
+              <div>
+                <h3 className="font-bold text-neutral-text dark:text-white">
+                  {post.title}
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                  {post.excerpt || post.content.substring(0, 60)}...
+                </p>
+                <span className="inline-block text-xs bg-primary-50 dark:bg-primary-900/30 text-primary dark:text-primary-400 px-2 py-0.5 rounded-full mt-1">
+                  {post.tag}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleEdit(post)}
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-primary bg-primary-50 hover:bg-primary-100 rounded-lg transition-colors"
+                >
+                  <Pencil className="w-3.5 h-3.5" /> Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(post.id)}
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Delete
+                </button>
+              </div>
+            </div>
+          ))
         )}
       </div>
     </div>

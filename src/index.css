@@ -11,6 +11,8 @@
 html {
   -webkit-tap-highlight-color: transparent;
   scroll-behavior: smooth;
+  /* 🛡️ FIX: Stops mobile overscroll from showing white space */
+  overscroll-behavior: none; 
 }
 
 body {
@@ -19,6 +21,8 @@ body {
   color: #1A1A1A;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* 🛡️ FIX: Matches html background to avoid the rubber-banding flash */
+  background-color: #F8F9FA;
 }
 
 /* Custom scrollbar */

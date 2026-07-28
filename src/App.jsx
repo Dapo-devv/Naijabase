@@ -55,12 +55,11 @@ function ErrorBoundary({ children }) {
   return children;
 }
 
-// 🚀 THEME MANAGER COMPONENT (Moved from Profile to here)
+// 🚀 THEME MANAGER COMPONENT
 function ThemeManager() {
   const { currentUser } = useNaijaBase();
 
   useEffect(() => {
-    // 🚀 Run this immediately when user data loads
     if (currentUser?.theme === "dark") {
       document.documentElement.classList.add("dark");
     } else {
@@ -68,19 +67,21 @@ function ThemeManager() {
     }
   }, [currentUser?.theme]);
 
-  return null; // This component renders nothing, just runs the effect
+  return null; 
 }
 
 export default function App() {
   return (
     <ErrorBoundary>
       <NaijaBaseProvider>
-        {/* 🚀 ThemeManager inside the Provider ensures it has access to currentUser */}
         <ThemeManager />
 
+        {/* 🛡️ FIX: Added flex-col, min-h-screen, and bg colors for mobile overscroll */}
         <div className="min-h-screen bg-neutral-bg dark:bg-gray-900 flex flex-col transition-colors duration-300">
           <Navbar />
-          <main className="flex-1 pb-20 md:pb-6">
+          
+          {/* 🛡️ FIX: Added pt-safe and pb-safe for mobile notches/gesture bars */}
+          <main className="flex-1 pt-safe pb-safe w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
@@ -166,7 +167,8 @@ export default function App() {
 
           <BottomNav />
 
-          <footer className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 py-6 mt-8 transition-colors duration-300">
+          {/* 🛡️ FIX: Added mt-auto to push footer to the bottom on tall screens */}
+          <footer className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 py-6 mt-8 md:mt-12 mt-auto transition-colors duration-300">
             <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 © {new Date().getFullYear()}{" "}
