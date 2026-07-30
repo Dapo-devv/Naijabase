@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import {
   ShoppingCart,
   Save,
@@ -23,11 +23,15 @@ export default function MarketPage() {
   const [prices, setPrices] = useState({});
   const [saved, setSaved] = useState(false);
 
+  // 🚀 NEW: Monthly Archive State
+  const [selectedMonth, setSelectedMonth] = useState(null);
+
   const justSavedRef = useRef(false);
   const hasLoadedRef = useRef(false);
 
   if (!data) return null;
 
+  // --- Load Prices into form ---
   useEffect(() => {
     if (justSavedRef.current) return;
 
@@ -93,7 +97,6 @@ export default function MarketPage() {
       pricesObj[it] = isNaN(v) ? 0 : v;
     });
 
-    // 🚀 FIX: Use new Date().toISOString() for proper date format
     const newLog = {
       id: Date.now(),
       date: new Date().toISOString(),
@@ -147,8 +150,36 @@ export default function MarketPage() {
   };
 
   const isEditing = !!editingId;
-  const sortedLogs = [...data.marketLogs].sort((a, b) => {
-    // 🚀 FIX: Handle null/undefined dates gracefully
+  const allLogs = data.marketLogs || [];
+
+  // 🚀 NEW: Get unique months from all logs
+  const monthKeys = useMemo(() => {
+    const months = allLogs.map((log) => log.date.slice(0, 7));
+    return [...new Set(months)].sort((a, b) => b.localeCompare(a));
+  }, [allLogs]);
+
+  // 🚀 NEW: Filter logs based on selected month
+  const filteredLogs = useMemo(() => {
+    if (!selectedMonth) return allLogs;
+    return allLogs.filter((log) => log.date.startsWith(selectedMonth));
+  }, [allLogs, selectedMonth]);
+
+  // 🚀 NEW: Calculate totals for the currently viewed month
+  const monthlyTotals = useMemo(() => {
+    const totalSpent = filteredLogs.reduce(
+      (sum, log) =>
+        sum + Object.values(log.prices).reduce((s, v) => s + (v || 0), 0),
+      0,
+    );
+    const totalItems = filteredLogs.reduce(
+      (sum, log) => sum + Object.keys(log.prices).length,
+      0,
+    );
+    return { totalSpent, totalItems, daysLogged: filteredLogs.length };
+  }, [filteredLogs]);
+
+  // Sort the currently displayed logs (Newest first)
+  const sortedLogs = [...filteredLogs].sort((a, b) => {
     const dateA = a.date || "";
     const dateB = b.date || "";
     if (dateA !== dateB) return dateB.localeCompare(dateA);
@@ -167,6 +198,7 @@ export default function MarketPage() {
         </p>
       </div>
 
+      {/* --- INPUT FORM --- */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-5">
         {isEditing && (
           <div className="mb-4 flex items-center gap-2 text-sm text-secondary-600 dark:text-secondary-400 bg-secondary-50 dark:bg-secondary-900/30 px-3 py-2 rounded-lg border border-secondary-200 dark:border-secondary-800">
@@ -196,19 +228,115 @@ export default function MarketPage() {
 
       <AdSlot width={300} height={250} />
 
+      {/* --- CHART SECTION --- */}
       <div className="w-full overflow-x-auto">
         <MarketChart logs={data.marketLogs} items={data.marketItems} />
       </div>
 
+      {/* --- MONTHLY ARCHIVE SECTION --- */}
       <div>
         <h2 className="text-lg font-bold text-neutral-text dark:text-white flex items-center gap-2 mb-4">
           <Calendar className="w-5 h-5 text-primary dark:text-primary-400" />{" "}
-          Past Expense Logs
+          Expense Logs & Archives
         </h2>
+
+        {/* Month Filter Buttons */}
+        {monthKeys.length > 0 && (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 mb-6">
+            <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">
+              Filter by Month
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setSelectedMonth(null)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  !selectedMonth
+                    ? "bg-primary text-white dark:bg-primary-600"
+                    : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                }`}
+              >
+                All Time
+              </button>
+              {monthKeys.map((month) => {
+                const dateObj = new Date(month + "-01");
+                const label = dateObj.toLocaleDateString("en-NG", {
+                  month: "long",
+                  year: "numeric",
+                });
+                return (
+                  <button
+                    key={month}
+                    onClick={() => setSelectedMonth(month)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      selectedMonth === month
+                        ? "bg-primary text-white dark:bg-primary-600"
+                        : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Monthly Totals Summary Cards */}
+        {selectedMonth && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+            <div className="bg-green-50/80 dark:bg-green-900/20 border border-green-100 dark:border-green-800 rounded-xl p-3 text-center">
+              <p className="text-[10px] font-semibold text-green-700 dark:text-green-400 uppercase">
+                Total Spent
+              </p>
+              <p className="text-lg font-extrabold text-green-600 dark:text-green-400">
+                {naira(monthlyTotals.totalSpent)}
+              </p>
+            </div>
+            <div className="bg-blue-50/80 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl p-3 text-center">
+              <p className="text-[10px] font-semibold text-blue-700 dark:text-blue-400 uppercase">
+                Items Logged
+              </p>
+              <p className="text-lg font-extrabold text-blue-600 dark:text-blue-400">
+                {monthlyTotals.totalItems}
+              </p>
+            </div>
+            <div className="bg-purple-50/80 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 rounded-xl p-3 text-center">
+              <p className="text-[10px] font-semibold text-purple-700 dark:text-purple-400 uppercase">
+                Days Logged
+              </p>
+              <p className="text-lg font-extrabold text-purple-600 dark:text-purple-400">
+                {monthlyTotals.daysLogged}
+              </p>
+            </div>
+            <div className="bg-orange-50/80 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800 rounded-xl p-3 text-center">
+              <p className="text-[10px] font-semibold text-orange-700 dark:text-orange-400 uppercase">
+                Avg. Per Day
+              </p>
+              <p className="text-lg font-extrabold text-orange-600 dark:text-orange-400">
+                {naira(
+                  monthlyTotals.daysLogged > 0
+                    ? Math.round(
+                        monthlyTotals.totalSpent / monthlyTotals.daysLogged,
+                      )
+                    : 0,
+                )}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Logs List */}
         {sortedLogs.length === 0 ? (
           <div className="bg-gray-50 dark:bg-gray-800/40 rounded-xl p-8 text-center text-gray-400 dark:text-gray-500 border border-dashed dark:border-gray-700">
             <p className="text-sm">
-              No logs yet. Log your first daily expenses above!
+              {selectedMonth
+                ? `No logs found for ${new Date(
+                    selectedMonth + "-01",
+                  ).toLocaleDateString("en-NG", {
+                    month: "long",
+                    year: "numeric",
+                  })}.`
+                : "No logs yet. Log your first daily expenses above!"}
             </p>
           </div>
         ) : (
@@ -259,6 +387,7 @@ export default function MarketPage() {
         )}
       </div>
 
+      {/* --- VIEW MODAL --- */}
       {viewingLog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/80 p-4 backdrop-blur-sm animate-fade-in">
           <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700">
