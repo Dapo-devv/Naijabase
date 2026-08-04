@@ -105,7 +105,7 @@ export default function MarketPage() {
       pricesObj[it] = isNaN(v) ? 0 : v;
     });
 
-    // 🚀 NEW: Uses the user-selected date instead of auto-today
+    // 🚀 Uses the user-selected date instead of auto-today
     const newLog = {
       id: Date.now(),
       date: new Date(logDate).toISOString(),
@@ -215,7 +215,7 @@ export default function MarketPage() {
           </div>
         )}
 
-        {/* 🚀 NEW: Custom Date Picker */}
+        {/* 🚀 FIXED: Date Picker - Full width on mobile, half width on desktop */}
         <div className="mb-4">
           <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
             Date of Expense
