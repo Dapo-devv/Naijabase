@@ -1,3 +1,4 @@
+/* stylelint-disable */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
@@ -54,6 +55,8 @@ input[type='number']::-webkit-outer-spin-button {
 
 input[type='number'] {
   -moz-appearance: textfield;
+  appearance: textfield;
+  /* 🛡️ FIX: Added standard appearance to silence VS Code warning */
 }
 
 /* Toggle switch transition */
@@ -220,46 +223,47 @@ input[type='number'] {
   box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
 }
 
-/* --- Dark Mode Overrides for Markdown --- */
+/* --- 🚨 FORCED BRIGHT WHITE DARK MODE OVERRIDES FOR MARKDOWN (BLOG) --- */
 .dark .prose-naija-dark p {
-  color: #f3f4f6;
-  /* White (gray-100) */
+  color: #f3f4f6 !important;
+  /* Pure white-gray */
 }
 
 .dark .prose-naija-dark h2 {
-  color: #86efac;
-  /* Brighter green */
+  color: #86efac !important;
+  /* Bright Green */
 }
 
 .dark .prose-naija-dark h3 {
-  color: #86efac;
-  /* Brighter green */
+  color: #86efac !important;
+  /* Bright Green */
 }
 
 .dark .prose-naija-dark ul,
 .dark .prose-naija-dark ol {
-  color: #f3f4f6;
+  color: #f3f4f6 !important;
+  /* Pure white-gray */
 }
 
 .dark .prose-naija-dark strong {
-  color: #ffffff;
-  /* Pure white */
+  color: #ffffff !important;
+  /* Pure White */
 }
 
 .dark .prose-naija-dark blockquote {
-  border-left-color: #86efac;
-  color: #e5e7eb;
+  border-left-color: #86efac !important;
+  color: #e5e7eb !important;
 }
 
 .dark .prose-naija-dark a {
-  color: #86efac;
+  color: #86efac !important;
 }
 
 /* 🚨 FIX: Dark mode color for Code Blocks */
 .dark .prose-naija-dark pre,
 .dark .prose-naija-dark code {
-  background-color: #1f2937;
+  background-color: #1f2937 !important;
   /* Dark gray for code */
-  color: #e5e7eb;
-  border-color: #374151;
+  color: #e5e7eb !important;
+  border-color: #374151 !important;
 }

@@ -96,11 +96,14 @@ export default function Register() {
           </p>
         </div>
 
+        {/* 🚨 UPDATED: App Description Box (Matches Login Page) */}
         <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-xl p-3 mb-5 flex gap-2 transition-colors duration-300">
           <AlertTriangle className="w-4 h-4 text-amber-500 dark:text-amber-400 shrink-0 mt-0.5" />
           <p className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
-            Your data will sync securely across all your devices. Check your
-            email to confirm your account.
+            <span className="font-bold">Track your daily market expenses,</span>{" "}
+            business revenue, trip budgets, and savings—all in one simple
+            dashboard built for daily spending activities. Your data syncs
+            securely across all your devices.
           </p>
         </div>
 

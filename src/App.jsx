@@ -76,100 +76,103 @@ export default function App() {
       <NaijaBaseProvider>
         <ThemeManager />
 
-        <div className="min-h-screen bg-neutral-bg dark:bg-gray-900 flex flex-col transition-colors duration-300">
+        {/* 🛡️ LAYOUT FIX: 'h-screen overflow-hidden' keeps the browser from overscrolling */}
+        <div className="h-screen overflow-hidden bg-neutral-bg dark:bg-gray-900 flex flex-col transition-colors duration-300">
           <Navbar />
 
-          <main className="flex-1 pt-safe pb-safe w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route
-                path="/"
-                element={
-                  <ProtectedRoute>
-                    <Dashboard />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/profile"
-                element={
-                  <ProtectedRoute>
-                    <Profile />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/market"
-                element={
-                  <ProtectedRoute>
-                    <MarketPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/finance"
-                element={
-                  <ProtectedRoute>
-                    <FinanceHubPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/trip"
-                element={
-                  <ProtectedRoute>
-                    <TripPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/savings"
-                element={
-                  <ProtectedRoute>
-                    <SavingsPage />
-                  </ProtectedRoute>
-                }
-              />
-
-              <Route
-                path="/admin"
-                element={
-                  <ProtectedRoute>
-                    <AdminPanel />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/blog"
-                element={
-                  <ProtectedRoute>
-                    <AdminBlogManager />
-                  </ProtectedRoute>
-                }
-              />
-
-              <Route path="/blog" element={<BlogIndex />} />
-              <Route path="/blog/:slug" element={<BlogDetail />} />
-            </Routes>
+          {/* 🛡️ SCROLL AREA: This is the ONLY part that scrolls. It has safe padding for mobile headers */}
+          <main className="flex-1 overflow-y-auto pt-safe pb-safe w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 scroll-smooth">
+            <div className="min-h-full pb-24 sm:pb-6">
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route
+                  path="/"
+                  element={
+                    <ProtectedRoute>
+                      <Dashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/profile"
+                  element={
+                    <ProtectedRoute>
+                      <Profile />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/market"
+                  element={
+                    <ProtectedRoute>
+                      <MarketPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/finance"
+                  element={
+                    <ProtectedRoute>
+                      <FinanceHubPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/trip"
+                  element={
+                    <ProtectedRoute>
+                      <TripPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/savings"
+                  element={
+                    <ProtectedRoute>
+                      <SavingsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin"
+                  element={
+                    <ProtectedRoute>
+                      <AdminPanel />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/blog"
+                  element={
+                    <ProtectedRoute>
+                      <AdminBlogManager />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route path="/blog" element={<BlogIndex />} />
+                <Route path="/blog/:slug" element={<BlogDetail />} />
+              </Routes>
+            </div>
           </main>
 
-          {/* 🚀 FIX: Static Mobile Ad (Doesn't overlay social links) */}
-          <div className="md:hidden w-full flex justify-center px-4 pb-4 bg-neutral-bg dark:bg-gray-900 transition-colors duration-300">
-            <div className="w-full max-w-[350px]">
+          {/* 🛡️ BOTTOM FIXED AREA: The Ad and BottomNav sit perfectly at the bottom without overlapping */}
+          <div className="flex flex-col items-center justify-end w-full z-30 bg-neutral-bg dark:bg-gray-900 flex-shrink-0">
+            {/* 🛡️ AD SLOT: Added a tiny bit of padding so it never touches the tabs */}
+            <div className="w-full max-w-[360px] pb-1 px-2 sm:hidden">
               <AdSlot
                 width={320}
                 height={50}
                 label="Ad Space"
-                className="!py-2 w-full"
+                className="!py-1 w-full"
               />
             </div>
+
+            <BottomNav />
           </div>
 
-          <BottomNav />
-
-          {/* 🚀 FIXED: Removed 'mt-8' to resolve Tailwind conflict. Kept only 'mt-auto'. */}
-          <footer className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 py-6 mt-auto transition-colors duration-300">
+          {/* Footer for Desktop only */}
+          <footer className="hidden md:block bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 py-6 mt-auto transition-colors duration-300">
             <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 © {new Date().getFullYear()}{" "}
@@ -184,7 +187,6 @@ export default function App() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-gray-400 hover:text-primary transition-colors"
-                  aria-label="Follow KudiTrack on Instagram"
                 >
                   <Instagram className="w-5 h-5" />
                 </a>
@@ -193,7 +195,6 @@ export default function App() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-gray-400 hover:text-primary transition-colors"
-                  aria-label="Follow KudiTrack on X"
                 >
                   <Twitter className="w-5 h-5" />
                 </a>
