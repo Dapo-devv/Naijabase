@@ -23,10 +23,12 @@ export default function MarketPage() {
   const [prices, setPrices] = useState({});
   const [saved, setSaved] = useState(false);
 
-  // 🚀 Date Picker for the expense log
-  const [logDate, setLogDate] = useState(new Date().toISOString().split("T")[0]);
+  // Date Picker for the expense log
+  const [logDate, setLogDate] = useState(
+    new Date().toISOString().split("T")[0],
+  );
 
-  // 🚀 Monthly Archive State
+  // Monthly Archive State
   const [selectedMonth, setSelectedMonth] = useState(null);
 
   const justSavedRef = useRef(false);
@@ -50,7 +52,7 @@ export default function MarketPage() {
       }
     } else {
       if (!hasLoadedRef.current) {
-        // 🚀 Start with empty prices object
+        // Start with empty prices object
         setPrices({});
         setLogDate(new Date().toISOString().split("T")[0]);
         hasLoadedRef.current = true;
@@ -85,7 +87,6 @@ export default function MarketPage() {
   };
 
   const handleLog = () => {
-    // 🚀 Check if there are ANY items in the list before saving
     if (data.marketItems.length === 0) {
       alert("Please add at least one item before saving.");
       return;
@@ -120,12 +121,12 @@ export default function MarketPage() {
     setSaved(true);
     setEditingId(null);
 
-    // 🚨 CRITICAL CHANGE: Clear the items and prices completely after saving
+    // Clear the items and prices completely after saving
     updateUserData((d) => ({
       ...d,
       marketItems: [], // Wipe the item list
     }));
-    setPrices({}); // Clear the prices on the screen
+    setPrices({});
 
     setTimeout(() => {
       justSavedRef.current = false;
@@ -163,9 +164,22 @@ export default function MarketPage() {
     return [...new Set(months)].sort((a, b) => b.localeCompare(a));
   }, [allLogs]);
 
-  // 🚀 Filter logs based on selected month
+  // 🚀 DEFAULT TO CURRENT MONTH ON LOAD
+  useEffect(() => {
+    if (monthKeys.length > 0 && !selectedMonth) {
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      // Check if the current month has any logs. If yes, select it. If not, select the most recent month.
+      if (monthKeys.includes(currentMonth)) {
+        setSelectedMonth(currentMonth);
+      } else {
+        setSelectedMonth(monthKeys[0]); // Fallback to the most recent month with data
+      }
+    }
+  }, [monthKeys, selectedMonth]);
+
+  // 🚀 Filter logs based on selected month only
   const filteredLogs = useMemo(() => {
-    if (!selectedMonth) return allLogs;
+    if (!selectedMonth) return [];
     return allLogs.filter((log) => log.date.startsWith(selectedMonth));
   }, [allLogs, selectedMonth]);
 
@@ -210,8 +224,7 @@ export default function MarketPage() {
             <Pencil className="w-4 h-4" /> Editing this expense log
           </div>
         )}
-        
-        {/* 🚨 FIXED: Date Picker - Now respects card padding on mobile */}
+
         <div className="mb-4">
           <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
             Date of Expense
@@ -247,7 +260,7 @@ export default function MarketPage() {
 
       <AdSlot width={300} height={250} />
 
-      {/* --- CHART SECTION --- */}
+      {/* --- CHART SECTION (Only displays selected month data) --- */}
       <div className="w-full overflow-x-auto">
         <MarketChart logs={filteredLogs} items={data.marketItems} />
       </div>
@@ -259,12 +272,12 @@ export default function MarketPage() {
           Expense Logs & Archives
         </h2>
 
-        {/* Month Filter Buttons */}
+        {/* Month Filter Buttons - Only allow switching between months */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 mb-6">
           <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">
             Select a Month to View History
           </h3>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap justify-start items-center gap-2 overflow-x-auto pb-2 max-w-full">
             {monthKeys.length > 0 ? (
               monthKeys.map((month) => {
                 const dateObj = new Date(month + "-01");
@@ -276,7 +289,7 @@ export default function MarketPage() {
                   <button
                     key={month}
                     onClick={() => setSelectedMonth(month)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
                       selectedMonth === month
                         ? "bg-primary text-white dark:bg-primary-600"
                         : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
@@ -338,7 +351,7 @@ export default function MarketPage() {
           </div>
         )}
 
-        {/* CLEAR AND PERSONALIZED MESSAGE FOR EACH MONTH */}
+        {/* CLEAR MESSAGE FOR EACH MONTH */}
         <div className="space-y-3">
           {sortedLogs.length === 0 ? (
             <div className="bg-gray-50 dark:bg-gray-800/40 rounded-xl p-8 text-center text-gray-400 dark:text-gray-500 border border-dashed dark:border-gray-700">
