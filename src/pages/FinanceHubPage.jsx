@@ -99,7 +99,9 @@ export default function FinanceHubPage() {
     .filter((e) => e.type === "savings" && e.date.startsWith(currentMonth))
     .reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
 
-  const monthlyProfit = monthlyRevenue - monthlyExpenses - monthlyStaffCost;
+  // 🚨 UPDATED: Calculates the exact balance left after ALL expenses and savings
+  const balanceLeft =
+    monthlyRevenue - monthlyExpenses - monthlyStaffCost - monthlySavings;
 
   // --- Unique Months ---
   const monthKeys = useMemo(() => {
@@ -578,14 +580,15 @@ export default function FinanceHubPage() {
               </p>
             </div>
             <div className="bg-gray-50 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 rounded-2xl p-5 text-center col-span-1 sm:col-span-2 lg:col-span-1">
+              {/* 🚨 UPDATED: Now shows Balance Left */}
               <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-                Monthly Net Profit
+                Balance Left
               </p>
               <p
-                className={`text-3xl font-extrabold mt-1 ${monthlyProfit >= 0 ? "text-primary dark:text-primary-400" : "text-red-600 dark:text-red-400"}`}
+                className={`text-3xl font-extrabold mt-1 ${balanceLeft >= 0 ? "text-primary dark:text-primary-400" : "text-red-600 dark:text-red-400"}`}
               >
-                {monthlyProfit >= 0 ? "+" : ""}
-                {naira(monthlyProfit)}
+                {balanceLeft >= 0 ? "" : "-"}
+                {naira(Math.abs(balanceLeft))}
               </p>
             </div>
           </div>
