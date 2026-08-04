@@ -37,22 +37,21 @@ export default function AdminPanel() {
 
     const fetchStats = async () => {
       try {
-        // 🚀 Fetch from the lightning-fast SQL View we just created
-        const { data, error } = await supabase
-          .from("admin_stats")
-          .select("*")
-          .single();
+        // 🚀 SECURE FIX: Calling the safe RPC function instead of the exposed view
+        const { data, error } = await supabase.rpc("get_admin_stats");
 
         if (error) throw error;
 
-        if (data) {
+        // The function returns an array with one object
+        if (data && data.length > 0) {
+          const statsData = data[0];
           setStats({
-            total_users: data.total_users || 0,
-            active_users_7d: data.active_users_7d || 0,
-            total_savings: data.total_savings || 0,
-            users_with_market_logs: data.users_with_market_logs || 0,
-            total_market_logs: data.total_market_logs || 0,
-            avg_sale_amount: data.avg_sale_amount || 0,
+            total_users: statsData.total_users || 0,
+            active_users_7d: statsData.active_users_7d || 0,
+            total_savings: statsData.total_savings || 0,
+            users_with_market_logs: statsData.users_with_market_logs || 0,
+            total_market_logs: statsData.total_market_logs || 0,
+            avg_sale_amount: statsData.avg_sale_amount || 0,
           });
         }
       } catch (err) {
