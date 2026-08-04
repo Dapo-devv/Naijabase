@@ -24,9 +24,7 @@ export default function MarketPage() {
   const [saved, setSaved] = useState(false);
 
   // 🚀 Date Picker for the expense log
-  const [logDate, setLogDate] = useState(
-    new Date().toISOString().split("T")[0],
-  );
+  const [logDate, setLogDate] = useState(new Date().toISOString().split("T")[0]);
 
   // 🚀 Monthly Archive State
   const [selectedMonth, setSelectedMonth] = useState(null);
@@ -212,8 +210,8 @@ export default function MarketPage() {
             <Pencil className="w-4 h-4" /> Editing this expense log
           </div>
         )}
-
-        {/* 🚨 FIXED: Date Picker - Now blends perfectly with dark mobile boxes */}
+        
+        {/* 🚨 FIXED: Date Picker - Now respects card padding on mobile */}
         <div className="mb-4">
           <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
             Date of Expense
@@ -222,7 +220,7 @@ export default function MarketPage() {
             type="date"
             value={logDate}
             onChange={(e) => setLogDate(e.target.value)}
-            className="w-full sm:w-1/3 px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-transparent text-gray-800 dark:text-gray-200"
+            className="w-full max-w-full sm:w-1/3 px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
           />
         </div>
 
