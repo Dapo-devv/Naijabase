@@ -23,12 +23,12 @@ export default function MarketPage() {
   const [prices, setPrices] = useState({});
   const [saved, setSaved] = useState(false);
 
-  // 🚀 NEW: Date Picker for the expense log
+  // 🚀 Date Picker for the expense log
   const [logDate, setLogDate] = useState(
     new Date().toISOString().split("T")[0],
   );
 
-  // 🚀 NEW: Monthly Archive State
+  // 🚀 Monthly Archive State
   const [selectedMonth, setSelectedMonth] = useState(null);
 
   const justSavedRef = useRef(false);
@@ -47,17 +47,13 @@ export default function MarketPage() {
         data.marketItems.forEach((it) => {
           loadedPrices[it] = log.prices?.[it] ?? "";
         });
-        // 🚀 Load the date of the log being edited
         setLogDate(log.date.split("T")[0]);
         setPrices(loadedPrices);
       }
     } else {
       if (!hasLoadedRef.current) {
-        const cleared = {};
-        data.marketItems.forEach((it) => {
-          cleared[it] = "";
-        });
-        setPrices(cleared);
+        // 🚀 Start with empty prices object
+        setPrices({});
         setLogDate(new Date().toISOString().split("T")[0]);
         hasLoadedRef.current = true;
       }
@@ -91,11 +87,17 @@ export default function MarketPage() {
   };
 
   const handleLog = () => {
+    // 🚀 Check if there are ANY items in the list before saving
+    if (data.marketItems.length === 0) {
+      alert("Please add at least one item before saving.");
+      return;
+    }
+
     const hasData = data.marketItems.some(
       (item) => parseFloat(prices[item]) > 0,
     );
     if (!hasData) {
-      alert("Please enter at least one expense before saving.");
+      alert("Please enter at least one price before saving.");
       return;
     }
 
@@ -105,7 +107,6 @@ export default function MarketPage() {
       pricesObj[it] = isNaN(v) ? 0 : v;
     });
 
-    // 🚀 Uses the user-selected date instead of auto-today
     const newLog = {
       id: Date.now(),
       date: new Date(logDate).toISOString(),
@@ -121,11 +122,12 @@ export default function MarketPage() {
     setSaved(true);
     setEditingId(null);
 
-    const cleared = {};
-    data.marketItems.forEach((it) => {
-      cleared[it] = "";
-    });
-    setPrices(cleared);
+    // 🚨 CRITICAL CHANGE: Clear the items and prices completely after saving
+    updateUserData((d) => ({
+      ...d,
+      marketItems: [], // Wipe the item list
+    }));
+    setPrices({}); // Clear the prices on the screen
 
     setTimeout(() => {
       justSavedRef.current = false;
@@ -149,11 +151,7 @@ export default function MarketPage() {
     }));
     if (editingId === id) {
       setEditingId(null);
-      const cleared = {};
-      data.marketItems.forEach((it) => {
-        cleared[it] = "";
-      });
-      setPrices(cleared);
+      setPrices({});
     }
     setViewingLog(null);
   };
@@ -215,7 +213,7 @@ export default function MarketPage() {
           </div>
         )}
 
-        {/* 🚀 FIXED: Date Picker - Full width on mobile, half width on desktop */}
+        {/* 🚨 FIXED: Date Picker - Now blends perfectly with dark mobile boxes */}
         <div className="mb-4">
           <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
             Date of Expense
@@ -224,7 +222,7 @@ export default function MarketPage() {
             type="date"
             value={logDate}
             onChange={(e) => setLogDate(e.target.value)}
-            className="w-full sm:w-1/3 px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+            className="w-full sm:w-1/3 px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-transparent text-gray-800 dark:text-gray-200"
           />
         </div>
 
@@ -251,7 +249,7 @@ export default function MarketPage() {
 
       <AdSlot width={300} height={250} />
 
-      {/* --- CHART SECTION (NOW FILTERS BY SELECTED MONTH) --- */}
+      {/* --- CHART SECTION --- */}
       <div className="w-full overflow-x-auto">
         <MarketChart logs={filteredLogs} items={data.marketItems} />
       </div>
@@ -342,7 +340,7 @@ export default function MarketPage() {
           </div>
         )}
 
-        {/* 🚨 CLEAR AND PERSONALIZED MESSAGE FOR EACH MONTH */}
+        {/* CLEAR AND PERSONALIZED MESSAGE FOR EACH MONTH */}
         <div className="space-y-3">
           {sortedLogs.length === 0 ? (
             <div className="bg-gray-50 dark:bg-gray-800/40 rounded-xl p-8 text-center text-gray-400 dark:text-gray-500 border border-dashed dark:border-gray-700">
