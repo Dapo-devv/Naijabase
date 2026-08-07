@@ -7,15 +7,15 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0"
     />
-    <title>KudiTrack — Nigerian Financial & Life Dashboard</title>
+    <title>TrackCash — Financial & Life Dashboard</title>
     <meta
       name="description"
-      content="Track market prices, generator costs, trips, business expenses, and savings — built for everyday Nigerian life."
+      content="Track daily expenses, business sales, staff costs, trips, and savings streaks — built for everyday life."
     />
 
     <!-- Favicon -->
-    <link rel="icon" type="image/png" href="/kuditrack-logo.png" />
-    <link rel="apple-touch-icon" href="/kuditrack-logo.png" />
+    <link rel="icon" type="image/png" href="/trackcash-logo.png" />
+    <link rel="apple-touch-icon" href="/trackcash-logo.png" />
 
     <!-- 🚀 GOOGLE ADSENSE GLOBAL SCRIPT -->
     <script
@@ -26,55 +26,18 @@
 
     <!-- 🚨 BRUTE-FORCE FIX FOR MOBILE OVERSCROLL & NOTCH -->
     <style>
-      /* KILLS THE RUBBER-BANDING BOUNCE ON MOBILE */
       html,
       body,
       #root {
         overscroll-behavior: none !important;
         -webkit-overflow-scrolling: touch;
-        background-color: #f8f9fa; /* Light Mode Background */
+        background-color: #f8f9fa;
       }
 
-      /* Makes sure Dark Mode background stays consistent */
       .dark html,
       .dark body,
       .dark #root {
         background-color: #111827;
-      }
-    </style>
-
-    <!-- 🚨 BRUTE-FORCE FIX FOR BLOG TEXT COLOR IN DARK MODE -->
-    <style>
-      /* 1. Kills the default gray text on every single element inside the blog post */
-      .dark .prose-naija-dark * {
-        color: #f3f4f6 !important; /* Force near-white */
-      }
-
-      /* 2. Specifically kills dim text on paragraphs, lists, and inline code */
-      .dark .prose-naija-dark p,
-      .dark .prose-naija-dark li,
-      .dark .prose-naija-dark ul,
-      .dark .prose-naija-dark ol {
-        color: #f3f4f6 !important;
-      }
-
-      /* 3. Forces headers and links to be a beautiful bright green */
-      .dark .prose-naija-dark h2,
-      .dark .prose-naija-dark h3,
-      .dark .prose-naija-dark a {
-        color: #86efac !important; /* Bright Green */
-      }
-
-      /* 4. Forces bold text to be pure, absolute white */
-      .dark .prose-naija-dark strong {
-        color: #ffffff !important;
-      }
-
-      /* 5. Fixes code blocks to be visible */
-      .dark .prose-naija-dark code,
-      .dark .prose-naija-dark pre {
-        background-color: #1f2937 !important;
-        color: #e5e7eb !important;
       }
     </style>
   </head>

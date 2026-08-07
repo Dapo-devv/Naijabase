@@ -5,6 +5,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 🚨 FIX: Ensures browser detects the safe area for notches and bottom bars */
+@supports (padding: max(0px)) {
+  :root {
+    --safe-area-inset-bottom: env(safe-area-inset-bottom);
+  }
+}
+
 :root {
   color-scheme: light;
 }

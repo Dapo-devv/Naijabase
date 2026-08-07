@@ -44,7 +44,7 @@ export default function BottomNav() {
         {tab("/market", "Expenses", ShoppingCart)}
         {tab("/finance", "Finance", Zap)}
         {tab("/trip", "Trip", MapPin)}
-        {tab("/savings", "Save", PiggyBank)}
+        {tab("/savings", "Salary", PiggyBank)} {/* 🚨 CHANGED TO SALARY */}
         {tab("/blog", "Blog", BookOpen)}
       </nav>
     );

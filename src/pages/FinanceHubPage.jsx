@@ -15,6 +15,7 @@ import {
   ChevronDown,
   ChevronUp,
   CheckCircle2,
+  Filter,
 } from "lucide-react";
 import AdSlot from "../components/AdSlot";
 import { useNaijaBase } from "../context/NaijaBaseContext";
@@ -33,6 +34,10 @@ export default function FinanceHubPage() {
 
   // --- Expanded All-Time Revenue State ---
   const [showAllTimeBreakdown, setShowAllTimeBreakdown] = useState(false);
+
+  // --- 🚀 NEW: Filter States ---
+  const [filterType, setFilterType] = useState("all");
+  const [filterDuration, setFilterDuration] = useState("thisMonth");
 
   // --- Company Name State ---
   const [companyName, setCompanyName] = useState(g?.companyName || "");
@@ -75,12 +80,55 @@ export default function FinanceHubPage() {
   // --- Get business data safely ---
   const businessEntries = g.businessEntries || [];
 
+  // --- 🚀 FILTER LOGIC ---
+  const getDateRange = (duration) => {
+    const now = new Date();
+    const start = new Date();
+    switch (duration) {
+      case "thisWeek":
+        start.setDate(now.getDate() - 7);
+        break;
+      case "thisMonth":
+        start.setMonth(now.getMonth());
+        start.setDate(1);
+        break;
+      case "last3Months":
+        start.setMonth(now.getMonth() - 3);
+        break;
+      case "allTime":
+        return null; // No start date restriction
+      default:
+        start.setMonth(now.getMonth());
+        start.setDate(1);
+        break;
+    }
+    return start.toISOString().split("T")[0];
+  };
+
+  const filteredEntries = useMemo(() => {
+    let entries = [...businessEntries];
+    const dateLimit = getDateRange(filterDuration);
+
+    // Filter by Type
+    if (filterType !== "all") {
+      entries = entries.filter((e) => e.type === filterType);
+    }
+
+    // Filter by Duration
+    if (dateLimit) {
+      entries = entries.filter((e) => e.date >= dateLimit);
+    }
+
+    // Sort by date (Newest first)
+    return entries.sort((a, b) => b.date.localeCompare(a.date));
+  }, [businessEntries, filterType, filterDuration]);
+
   // --- ALL-TIME REVENUE ---
   const allTimeRevenue = businessEntries
     .filter((e) => e.type === "sale")
     .reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
 
-  // --- CURRENT MONTH FINANCIALS ---
+  // --- CURRENT MONTH FINANCIALS (Keep this for the Overview Cards) ---
   const currentMonth = todayISO().slice(0, 7);
 
   const monthlyRevenue = businessEntries
@@ -109,7 +157,7 @@ export default function FinanceHubPage() {
     return [...new Set(months)].sort((a, b) => b.localeCompare(a));
   }, [businessEntries]);
 
-  // --- Filtered Month Entries (Newest first) ---
+  // --- Filtered Month Entries ---
   const filteredMonthEntries = useMemo(() => {
     if (!selectedMonth) return [];
     return businessEntries
@@ -177,23 +225,6 @@ export default function FinanceHubPage() {
       });
     return Object.entries(months).sort((a, b) => b[0].localeCompare(a[0]));
   }, [businessEntries]);
-
-  // --- 🚀 BULLETPROOF SORT: Recent Entries (Newest at TOP) ---
-  const recentEntries = useMemo(() => {
-    return [...businessEntries]
-      .sort((a, b) => {
-        // 1. Primary sort: Parse ISO strings to timestamps before subtracting (CRITICAL FIX)
-        const timeA = new Date(a.createdAt || a.id).getTime();
-        const timeB = new Date(b.createdAt || b.id).getTime();
-        const timeDiff = timeB - timeA;
-
-        if (timeDiff !== 0) return timeDiff;
-
-        // 2. Secondary sort: date string (newest first)
-        return b.date.localeCompare(a.date);
-      })
-      .slice(0, 8);
-  }, [businessEntries, renderKey]);
 
   // --- Toast Helper ---
   const showToast = (message) => {
@@ -580,7 +611,6 @@ export default function FinanceHubPage() {
               </p>
             </div>
             <div className="bg-gray-50 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 rounded-2xl p-5 text-center col-span-1 sm:col-span-2 lg:col-span-1">
-              {/* 🚨 UPDATED: Now shows Balance Left */}
               <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
                 Balance Left
               </p>
@@ -865,23 +895,58 @@ export default function FinanceHubPage() {
         </div>
       )}
 
-      {/* --- Recent Records Section (Max 8 entries, NEWEST AT TOP) --- */}
+      {/* --- 🚀 NEW: FILTERED TRANSACTION HISTORY --- */}
       {!selectedMonth && activeTab === "overview" && (
         <div className="mt-6">
-          <h2 className="text-lg font-bold text-neutral-text dark:text-white flex items-center gap-2 mb-4">
-            <Calendar className="w-5 h-5 text-primary dark:text-primary-400" />{" "}
-            Recent Records
-          </h2>
-          {recentEntries.length === 0 ? (
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
+            <h2 className="text-lg font-bold text-neutral-text dark:text-white flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-primary dark:text-primary-400" />{" "}
+              Transaction History
+            </h2>
+
+            {/* 🚀 FILTER CONTROLS */}
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+              <div className="relative flex-1 sm:flex-none">
+                <select
+                  value={filterType}
+                  onChange={(e) => setFilterType(e.target.value)}
+                  className="w-full sm:w-auto px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-primary/30 appearance-none pr-8"
+                >
+                  <option value="all">All Types</option>
+                  <option value="sale">Sales</option>
+                  <option value="expense">Expenses</option>
+                  <option value="staff">Staff</option>
+                  <option value="savings">Savings</option>
+                </select>
+                <Filter className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              </div>
+
+              <div className="relative flex-1 sm:flex-none">
+                <select
+                  value={filterDuration}
+                  onChange={(e) => setFilterDuration(e.target.value)}
+                  className="w-full sm:w-auto px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-primary/30 appearance-none pr-8"
+                >
+                  <option value="thisWeek">This Week</option>
+                  <option value="thisMonth">This Month</option>
+                  <option value="last3Months">Last 3 Months</option>
+                  <option value="allTime">All Time</option>
+                </select>
+                <Calendar className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
+          </div>
+
+          {filteredEntries.length === 0 ? (
             <div className="bg-gray-50 dark:bg-gray-800/40 rounded-xl p-8 text-center text-gray-400 dark:text-gray-500 border border-dashed dark:border-gray-700">
               <p className="text-sm">
-                No business records yet. Start logging your sales and expenses
-                above!
+                No transactions found for the selected filters. Start logging
+                your sales and expenses above!
               </p>
             </div>
           ) : (
             <div className="space-y-3">
-              {recentEntries.map((entry) => (
+              {filteredEntries.map((entry) => (
                 <div
                   key={entry.id}
                   className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm hover:shadow-md transition-shadow"
@@ -948,17 +1013,6 @@ export default function FinanceHubPage() {
                   </div>
                 </div>
               ))}
-
-              {/* CTA Message */}
-              <div className="bg-primary-50 dark:bg-primary-900/20 border border-primary-100 dark:border-primary-800 rounded-xl p-4 text-center mt-4">
-                <p className="text-sm text-primary-700 dark:text-primary-300">
-                  📅{" "}
-                  <span className="font-semibold">
-                    Open the Monthly tab above
-                  </span>{" "}
-                  to see all records organized by month.
-                </p>
-              </div>
             </div>
           )}
         </div>

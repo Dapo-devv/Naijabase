@@ -19,7 +19,6 @@ import BlogIndex from "./pages/BlogIndex";
 import BlogDetail from "./pages/BlogDetail";
 import { useState, useEffect } from "react";
 
-// 🚀 ERROR BOUNDARY COMPONENT
 function ErrorBoundary({ children }) {
   const [hasError, setHasError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -55,7 +54,6 @@ function ErrorBoundary({ children }) {
   return children;
 }
 
-// 🚀 THEME MANAGER COMPONENT
 function ThemeManager() {
   const { currentUser } = useNaijaBase();
 
@@ -80,9 +78,9 @@ export default function App() {
         <div className="h-screen overflow-hidden bg-neutral-bg dark:bg-gray-900 flex flex-col transition-colors duration-300">
           <Navbar />
 
-          {/* 🛡️ SCROLL AREA: This is the ONLY part that scrolls. It has safe padding for mobile headers */}
-          <main className="flex-1 overflow-y-auto pt-safe pb-safe w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 scroll-smooth">
-            <div className="min-h-full pb-24 sm:pb-6">
+          {/* 🛡️ SCROLL AREA: Added huge bottom padding so content never hides behind the bottom bar */}
+          <main className="flex-1 overflow-y-auto pt-safe pb-[calc(env(safe-area-inset-bottom)+90px)] w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 scroll-smooth">
+            <div className="min-h-full pb-0">
               <Routes>
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
@@ -174,10 +172,10 @@ export default function App() {
           {/* Footer for Desktop only */}
           <footer className="hidden md:block bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 py-6 mt-auto transition-colors duration-300">
             <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-gray-500 dark:text-gray-400 break-words">
                 © {new Date().getFullYear()}{" "}
                 <span className="font-semibold text-primary dark:text-primary-400">
-                  KudiTrack
+                  TrackCash
                 </span>
                 . All rights reserved.
               </p>

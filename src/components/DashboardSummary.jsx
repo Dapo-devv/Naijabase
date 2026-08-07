@@ -5,84 +5,59 @@ import { useNaijaBase } from "../context/NaijaBaseContext";
 export default function DashboardSummary() {
   const { currentUser } = useNaijaBase();
   const data = currentUser?.data;
-
   if (!data) return null;
 
-  // 🛡️ FIXED: Gets today's date correctly handling Timezone
   const today = todayISO();
-  console.log("📅 Today's date (Local ISO):", today);
-
-  // 🛡️ FIXED: Filters ALL logs from today, not just the first one
-  const todayLogs = data.marketLogs.filter((l) => {
-    // We compare the YYYY-MM-DD part of the date string
-    const logDate = l.date.split("T")[0];
-    return logDate === today;
+  const todayLogs = data.marketLogs.filter(
+    (l) => l.date.split("T")[0] === today,
+  );
+  let dailyTotal = 0,
+    todayItemsCount = 0;
+  todayLogs.forEach((log) => {
+    dailyTotal += Object.values(log.prices).reduce((s, v) => s + (v || 0), 0);
+    todayItemsCount += Object.keys(log.prices).length;
   });
 
-  console.log("📊 Number of logs found for today:", todayLogs.length);
-
-  // 🛡️ FIXED: Calculates the sum of all logs from today
-  let dailyTotal = 0;
-  let todayItemsCount = 0;
-
-  if (todayLogs.length > 0) {
-    todayLogs.forEach((log) => {
-      const dayTotal = Object.values(log.prices).reduce(
-        (sum, val) => sum + (val || 0),
-        0,
-      );
-      dailyTotal += dayTotal;
-      todayItemsCount += Object.keys(log.prices).length;
-    });
-  }
-
-  // --- Monthly market total (for the current month) ---
-  const currentMonth = today.slice(0, 7); // "YYYY-MM"
+  const currentMonth = today.slice(0, 7);
   let monthlyTotal = 0;
   data.marketLogs.forEach((log) => {
     if (log.date.startsWith(currentMonth)) {
-      const dayTotal = Object.values(log.prices).reduce(
-        (sum, val) => sum + (val || 0),
+      monthlyTotal += Object.values(log.prices).reduce(
+        (s, v) => s + (v || 0),
         0,
       );
-      monthlyTotal += dayTotal;
     }
   });
 
-  // --- Business Monthly Revenue from Business Hub ---
   const businessEntries = data.generator?.businessEntries || [];
   const monthlyBusinessRevenue = businessEntries
     .filter((e) => e.type === "sale" && e.date.startsWith(currentMonth))
-    .reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
+    .reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
 
-  // --- Active Trip ---
   const activeTrip = data.trips[data.trips.length - 1];
-
-  // --- Savings ---
   const s = data.savings;
 
   const cards = [
     {
-      label: "Today's Market",
-      value: todayLogs.length > 0 ? naira(dailyTotal) : "Not logged yet",
-      sub:
-        todayLogs.length > 0
-          ? `${todayItemsCount} items logged today`
-          : "Visit Market page",
+      label: "Today's Spend",
+      value: todayLogs.length ? naira(dailyTotal) : "No expenses yet",
+      sub: todayLogs.length
+        ? `${todayItemsCount} items logged`
+        : "Log your first purchase",
       icon: ShoppingCart,
       color: "primary",
     },
     {
-      label: "Monthly Market Spend",
+      label: "Monthly Spend",
       value: naira(monthlyTotal),
-      sub: `For ${currentMonth}`,
+      sub: `Total for ${currentMonth}`,
       icon: Calendar,
       color: "primary",
     },
     {
-      label: "Business Monthly Revenue",
+      label: "Business Income",
       value: naira(monthlyBusinessRevenue),
-      sub: `💼 Business · ${currentMonth}`,
+      sub: `Revenue · ${currentMonth}`,
       icon: Briefcase,
       color: "primary",
     },
@@ -92,8 +67,8 @@ export default function DashboardSummary() {
         ? `${activeTrip.origin} → ${activeTrip.destination}`
         : "No trips yet",
       sub: activeTrip
-        ? `Budget: ${naira(activeTrip.totalBudget || 0)} · ${formatDate(activeTrip.date)}`
-        : "Plan a trip",
+        ? `Budget: ${naira(activeTrip.totalBudget || 0)}`
+        : "Plan a new trip",
       icon: MapPin,
       color: "primary",
     },
@@ -102,10 +77,10 @@ export default function DashboardSummary() {
       value:
         s.streak > 0
           ? `${s.streak} day${s.streak !== 1 ? "s" : ""}`
-          : "No streak",
+          : "No streak yet",
       sub: s.goalName
         ? `${s.goalName} · ${s.platform || "No platform"}`
-        : "Set a goal",
+        : "Set a savings goal",
       icon: Flame,
       color: "secondary",
     },
@@ -118,16 +93,12 @@ export default function DashboardSummary() {
         return (
           <div
             key={i}
-            className="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow animate-slide-up"
+            className="group bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-lg hover:scale-[1.02] transition-all duration-300 animate-slide-up"
             style={{ animationDelay: `${i * 60}ms` }}
           >
             <div className="flex items-start justify-between mb-3">
               <div
-                className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                  c.color === "primary"
-                    ? "bg-primary-50 dark:bg-primary-900/30 text-primary dark:text-primary-400"
-                    : "bg-secondary-50 dark:bg-secondary-900/30 text-secondary-600 dark:text-secondary-400"
-                }`}
+                className={`w-10 h-10 rounded-xl flex items-center justify-center ${c.color === "primary" ? "bg-primary-50 dark:bg-primary-900/30 text-primary dark:text-primary-400 group-hover:bg-primary group-hover:text-white transition-colors" : "bg-secondary-50 dark:bg-secondary-900/30 text-secondary-600 dark:text-secondary-400 group-hover:bg-secondary group-hover:text-white transition-colors"}`}
               >
                 <Icon className="w-5 h-5" />
               </div>
@@ -135,7 +106,7 @@ export default function DashboardSummary() {
             <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
               {c.label}
             </p>
-            <p className="text-lg font-bold text-neutral-text dark:text-white mt-1 leading-tight truncate">
+            <p className="text-lg font-bold text-neutral-text dark:text-white mt-1 leading-tight break-words truncate">
               {c.value}
             </p>
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 truncate">

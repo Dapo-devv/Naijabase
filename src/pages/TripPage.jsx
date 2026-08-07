@@ -115,7 +115,6 @@ export default function TripPage() {
     setSaved(true);
     setEditingTripId(null);
 
-    // --- CLEAR EVERYTHING FOR NEW INPUT ---
     setOriginCountry("Nigeria");
     setOriginRegion("");
     setDestCountry("Nigeria");
@@ -199,11 +198,12 @@ export default function TripPage() {
           <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide flex items-center gap-1">
             <Calendar className="w-3 h-3" /> Trip Date
           </label>
+          {/* 🚨 FIXED: Transparent background with bottom border */}
           <input
             type="date"
             value={tripDate}
             onChange={(e) => setTripDate(e.target.value)}
-            className="mt-1 w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+            className="w-full max-w-full sm:max-w-[200px] px-0 py-2 bg-transparent border-b-2 border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 focus:outline-none focus:border-primary dark:focus:border-primary-400 transition-colors cursor-pointer text-base font-medium"
           />
         </div>
 
