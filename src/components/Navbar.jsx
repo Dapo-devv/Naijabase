@@ -91,8 +91,7 @@ export default function Navbar() {
                 className={`${linkBase} ${isActive("/savings")}`}
               >
                 Salary
-              </Link>{" "}
-              {/* 🚨 CHANGED TO SALARY */}
+              </Link>
               <Link to="/blog" className={`${linkBase} ${isActive("/blog")}`}>
                 Blog
               </Link>
@@ -102,6 +101,7 @@ export default function Navbar() {
               >
                 Profile
               </Link>
+
               {isAdmin && (
                 <Link
                   to="/admin"
@@ -110,6 +110,7 @@ export default function Navbar() {
                   <Shield className="w-4 h-4 inline mr-1" /> Admin
                 </Link>
               )}
+
               <button
                 onClick={handleLogout}
                 className={`${linkBase} text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center gap-1.5`}
@@ -221,8 +222,7 @@ export default function Navbar() {
             onClick={() => setMobileMenuOpen(false)}
           >
             Salary
-          </Link>{" "}
-          {/* 🚨 CHANGED TO SALARY */}
+          </Link>
           <Link
             to="/blog"
             className={`${linkBase} ${isActive("/blog")}`}
@@ -230,6 +230,7 @@ export default function Navbar() {
           >
             Blog
           </Link>
+
           {isAdmin && (
             <Link
               to="/admin"
@@ -239,6 +240,7 @@ export default function Navbar() {
               <Shield className="w-4 h-4 inline mr-1" /> Admin
             </Link>
           )}
+
           <button
             onClick={handleLogout}
             className={`${linkBase} text-red-600 dark:text-red-400 flex items-center gap-1.5 mt-2 border-t border-gray-200 dark:border-gray-700 pt-2`}

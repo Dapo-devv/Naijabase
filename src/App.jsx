@@ -74,11 +74,9 @@ export default function App() {
       <NaijaBaseProvider>
         <ThemeManager />
 
-        {/* 🛡️ LAYOUT FIX: 'h-screen overflow-hidden' keeps the browser from overscrolling */}
         <div className="h-screen overflow-hidden bg-neutral-bg dark:bg-gray-900 flex flex-col transition-colors duration-300">
           <Navbar />
 
-          {/* 🛡️ SCROLL AREA: Added huge bottom padding so content never hides behind the bottom bar */}
           <main className="flex-1 overflow-y-auto pt-safe pb-[calc(env(safe-area-inset-bottom)+90px)] w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 scroll-smooth">
             <div className="min-h-full pb-0">
               <Routes>
@@ -154,9 +152,7 @@ export default function App() {
             </div>
           </main>
 
-          {/* 🛡️ BOTTOM FIXED AREA: The Ad and BottomNav sit perfectly at the bottom without overlapping */}
           <div className="flex flex-col items-center justify-end w-full z-30 bg-neutral-bg dark:bg-gray-900 flex-shrink-0">
-            {/* 🛡️ AD SLOT: Added a tiny bit of padding so it never touches the tabs */}
             <div className="w-full max-w-[360px] pb-1 px-2 sm:hidden">
               <AdSlot
                 width={320}
@@ -165,7 +161,6 @@ export default function App() {
                 className="!py-1 w-full"
               />
             </div>
-
             <BottomNav />
           </div>
 
@@ -180,16 +175,18 @@ export default function App() {
                 . All rights reserved.
               </p>
               <div className="flex items-center gap-5">
+                {/* 🚨 UPDATED INSTAGRAM HANDLE */}
                 <a
-                  href="https://www.instagram.com/kudi.track"
+                  href="https://www.instagram.com/trackcash.ng"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-gray-400 hover:text-primary transition-colors"
                 >
                   <Instagram className="w-5 h-5" />
                 </a>
+                {/* 🚨 UPDATED TWITTER/X HANDLE */}
                 <a
-                  href="https://x.com/kuditracknaija"
+                  href="https://x.com/trackcash.ng"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-gray-400 hover:text-primary transition-colors"
