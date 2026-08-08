@@ -278,15 +278,17 @@ export default function MarketPage() {
           <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block break-words">
             Select Date
           </label>
-          {/* 🚨 FIXED: Added clickable icon + hover background */}
+          {/* 🚨 FIXED: Calendar icon INSIDE the gray bar */}
           <div className="relative w-full max-w-full sm:max-w-[200px]">
-            <Calendar className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-primary dark:text-primary-400 pointer-events-none" />
-            <input
-              type="date"
-              value={logDate}
-              onChange={(e) => setLogDate(e.target.value)}
-              className="w-full pl-6 py-2 bg-transparent border-b-2 border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 focus:outline-none focus:border-primary dark:focus:border-primary-400 transition-colors cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/30 rounded-t-lg"
-            />
+            <div className="flex items-center w-full px-4 py-2 bg-gray-200/50 dark:bg-gray-700/50 rounded-xl hover:bg-gray-300/50 dark:hover:bg-gray-600/50 transition-colors cursor-pointer group">
+              <Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400 mr-2 flex-shrink-0" />
+              <input
+                type="date"
+                value={logDate}
+                onChange={(e) => setLogDate(e.target.value)}
+                className="w-full bg-transparent border-none text-gray-800 dark:text-gray-200 focus:outline-none cursor-pointer text-base font-medium placeholder-gray-400"
+              />
+            </div>
           </div>
         </div>
 
@@ -555,15 +557,17 @@ export default function MarketPage() {
                 <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block break-words">
                   Date
                 </label>
-                {/* 🚨 FIXED: Added clickable icon + hover background for modal */}
+                {/* 🚨 FIXED: Calendar icon INSIDE the gray bar for modal */}
                 <div className="relative w-full max-w-full">
-                  <Calendar className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-primary dark:text-primary-400 pointer-events-none" />
-                  <input
-                    type="date"
-                    value={editDate}
-                    onChange={(e) => setEditDate(e.target.value)}
-                    className="w-full pl-6 py-2 bg-transparent border-b-2 border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 focus:outline-none focus:border-primary dark:focus:border-primary-400 transition-colors cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/30 rounded-t-lg"
-                  />
+                  <div className="flex items-center w-full px-4 py-2 bg-gray-200/50 dark:bg-gray-700/50 rounded-xl hover:bg-gray-300/50 dark:hover:bg-gray-600/50 transition-colors cursor-pointer group">
+                    <Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400 mr-2 flex-shrink-0" />
+                    <input
+                      type="date"
+                      value={editDate}
+                      onChange={(e) => setEditDate(e.target.value)}
+                      className="w-full bg-transparent border-none text-gray-800 dark:text-gray-200 focus:outline-none cursor-pointer text-base font-medium placeholder-gray-400"
+                    />
+                  </div>
                 </div>
               </div>
 
