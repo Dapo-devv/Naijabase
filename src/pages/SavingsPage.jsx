@@ -238,12 +238,18 @@ export default function SavingsPage() {
             <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
               Month
             </label>
-            <input
-              type="month"
-              value={monthYear}
-              onChange={(e) => setMonthYear(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
-            />
+            {/* 🚨 UPDATED: Calendar icon INSIDE the gray bar */}
+            <div className="relative w-full max-w-full sm:max-w-[200px]">
+              <div className="flex items-center w-full px-4 py-2 bg-gray-200/50 dark:bg-gray-700/50 rounded-xl hover:bg-gray-300/50 dark:hover:bg-gray-600/50 transition-colors cursor-pointer group">
+                <Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400 mr-2 flex-shrink-0" />
+                <input
+                  type="month"
+                  value={monthYear}
+                  onChange={(e) => setMonthYear(e.target.value)}
+                  className="w-full bg-transparent border-none text-gray-800 dark:text-gray-200 focus:outline-none cursor-pointer text-base font-medium placeholder-gray-400"
+                />
+              </div>
+            </div>
           </div>
           <div>
             <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
@@ -668,12 +674,18 @@ export default function SavingsPage() {
                 <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
                   Month
                 </label>
-                <input
-                  type="month"
-                  value={editMonth}
-                  onChange={(e) => setEditMonth(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
-                />
+                {/* 🚨 UPDATED: Calendar icon INSIDE the gray bar for modal */}
+                <div className="relative w-full max-w-full sm:max-w-[200px]">
+                  <div className="flex items-center w-full px-4 py-2 bg-gray-200/50 dark:bg-gray-700/50 rounded-xl hover:bg-gray-300/50 dark:hover:bg-gray-600/50 transition-colors cursor-pointer group">
+                    <Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400 mr-2 flex-shrink-0" />
+                    <input
+                      type="month"
+                      value={editMonth}
+                      onChange={(e) => setEditMonth(e.target.value)}
+                      className="w-full bg-transparent border-none text-gray-800 dark:text-gray-200 focus:outline-none cursor-pointer text-base font-medium placeholder-gray-400"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div>
