@@ -2,18 +2,21 @@ import { useState, useMemo } from "react";
 import {
   Wallet,
   Calendar,
-  Plus,
   Trash2,
   Eye,
-  Edit,
   X,
   CheckCircle2,
-  Lock,
+  Briefcase,
+  Banknote,
+  TrendingUp,
+  TrendingDown,
+  Edit2,
 } from "lucide-react";
 import { useNaijaBase } from "../context/NaijaBaseContext";
 import { todayISO, formatDate, naira } from "../utils/constants";
 
-const DEFAULT_CATEGORIES = [
+// Predefined expense categories for a professional look
+const EXPENSE_CATEGORIES = [
   "Rent",
   "Transport",
   "Food & Groceries",
@@ -21,6 +24,8 @@ const DEFAULT_CATEGORIES = [
   "Data & Internet",
   "Entertainment",
   "Health",
+  "Insurance",
+  "Education",
   "Other",
 ];
 
@@ -31,28 +36,30 @@ export default function SavingsPage() {
   // --- Safe fallback for missing array ---
   const salaryLogs = Array.isArray(data?.salaryLogs) ? data.salaryLogs : [];
 
-  // --- Form State ---
-  const [monthYear, setMonthYear] = useState(todayISO().slice(0, 7));
-  const [salaryAmount, setSalaryAmount] = useState("");
-  const [savingsInvested, setSavingsInvested] = useState("");
-  const [expenses, setExpenses] = useState([
-    { id: Date.now(), category: "Rent", amount: 0 },
-    { id: Date.now() + 1, category: "Transport", amount: 0 },
-    { id: Date.now() + 2, category: "Food & Groceries", amount: 0 },
-  ]);
-  const [customCategory, setCustomCategory] = useState("");
-
-  // --- Edit Modal State ---
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [editMonth, setEditMonth] = useState("");
-  const [editSalary, setEditSalary] = useState("");
-  const [editSavings, setEditSavings] = useState("");
-  const [editExpenses, setEditExpenses] = useState([]);
-
-  // --- View State ---
+  // --- State ---
+  const [activeTab, setActiveTab] = useState("income");
   const [viewingEntry, setViewingEntry] = useState(null);
   const [toast, setToast] = useState(null);
+
+  // --- Shared Month State ---
+  const [monthYear, setMonthYear] = useState(todayISO().slice(0, 7));
+
+  // --- PERSONAL INCOME STATE (Advanced Ledger) ---
+  const [incomeAmount, setIncomeAmount] = useState("");
+  const [savingsInvested, setSavingsInvested] = useState("");
+  const [incomeExpenses, setIncomeExpenses] = useState(
+    EXPENSE_CATEGORIES.map((cat) => ({ category: cat, amount: 0 })),
+  );
+
+  // --- SALARY (JOB) STATE (Advanced Payroll) ---
+  const [grossSalary, setGrossSalary] = useState("");
+  const [payeDeduction, setPayeDeduction] = useState("");
+  const [pensionDeduction, setPensionDeduction] = useState("");
+  const [otherDeductions, setOtherDeductions] = useState("");
+  const [bonuses, setBonuses] = useState("");
+  const [salaryExpenses, setSalaryExpenses] = useState(
+    EXPENSE_CATEGORIES.map((cat) => ({ category: cat, amount: 0 })),
+  );
 
   // --- Helpers ---
   const showToast = (message) => {
@@ -60,77 +67,103 @@ export default function SavingsPage() {
     setTimeout(() => setToast(null), 2500);
   };
 
-  const calculateTotals = (expenseList) => {
-    return expenseList.reduce(
+  const calculateTotalExpenses = (expenseArray) => {
+    return expenseArray.reduce(
       (sum, exp) => sum + (parseFloat(exp.amount) || 0),
       0,
     );
   };
 
-  // --- 🛡️ Is the Salary Lock active? ---
-  const hasValidSalary = parseFloat(salaryAmount) > 0;
-
-  // --- Standard expense handlers ---
-  const handleExpenseChange = (id, value) => {
-    setExpenses((prev) =>
-      prev.map((exp) =>
-        exp.id === id ? { ...exp, amount: parseFloat(value) || 0 } : exp,
+  // --- Update a specific category amount ---
+  const handleExpenseChange = (setList, index, value) => {
+    setList((prev) =>
+      prev.map((item, i) =>
+        i === index ? { ...item, amount: parseFloat(value) || 0 } : item,
       ),
     );
-  };
-
-  const handleRemoveExpense = (id) => {
-    if (expenses.length <= 1) return;
-    setExpenses((prev) => prev.filter((exp) => exp.id !== id));
-  };
-
-  const handleAddExpense = () => {
-    const trimmed = customCategory.trim();
-    if (!trimmed) return;
-    setExpenses((prev) => [
-      ...prev,
-      { id: Date.now(), category: trimmed, amount: 0 },
-    ]);
-    setCustomCategory("");
-  };
-
-  const handleAddPresetExpense = (category) => {
-    if (expenses.some((e) => e.category === category)) return;
-    setExpenses((prev) => [...prev, { id: Date.now(), category, amount: 0 }]);
   };
 
   // --- Reset Form ---
   const resetForm = () => {
     setMonthYear(todayISO().slice(0, 7));
-    setSalaryAmount("");
+    setIncomeAmount("");
     setSavingsInvested("");
-    setExpenses([
-      { id: Date.now(), category: "Rent", amount: 0 },
-      { id: Date.now() + 1, category: "Transport", amount: 0 },
-      { id: Date.now() + 2, category: "Food & Groceries", amount: 0 },
-    ]);
-    setEditingId(null);
+    setIncomeExpenses(
+      EXPENSE_CATEGORIES.map((cat) => ({ category: cat, amount: 0 })),
+    );
+    setGrossSalary("");
+    setPayeDeduction("");
+    setPensionDeduction("");
+    setOtherDeductions("");
+    setBonuses("");
+    setSalaryExpenses(
+      EXPENSE_CATEGORIES.map((cat) => ({ category: cat, amount: 0 })),
+    );
+    showToast("🔄 Form cleared for new entry");
   };
 
-  // --- Save Salary Record ---
-  const handleSave = () => {
-    const salary = parseFloat(salaryAmount);
-    if (!salary || salary <= 0) {
-      alert("Please enter your total salary for the month.");
+  // --- SAVE PERSONAL INCOME ---
+  const handleSaveIncome = () => {
+    const income = parseFloat(incomeAmount);
+    if (!income || income <= 0) {
+      alert("Please enter your total income for the month.");
       return;
     }
 
     const saved = parseFloat(savingsInvested) || 0;
-    const totalExpenses = calculateTotals(expenses);
+    const totalExpenses = calculateTotalExpenses(incomeExpenses);
 
     const newLog = {
       id: Date.now(),
       month: monthYear,
-      salary: salary,
+      type: "income",
+      income: income,
       savingsInvested: saved,
-      expenses: expenses,
+      expenses: incomeExpenses.filter((e) => e.amount > 0), // Only save non-zero expenses
       totalExpenses: totalExpenses,
-      balanceLeft: salary - totalExpenses - saved,
+      balanceLeft: income - totalExpenses - saved,
+      createdAt: new Date().toISOString(),
+    };
+
+    updateUserData((d) => {
+      const existingLogs = Array.isArray(d.salaryLogs) ? d.salaryLogs : [];
+      return { ...d, salaryLogs: [...existingLogs, newLog] };
+    });
+
+    showToast("✅ Income logged successfully!");
+    resetForm();
+  };
+
+  // --- SAVE SALARY (JOB) ---
+  const handleSaveSalary = () => {
+    const gross = parseFloat(grossSalary);
+    if (!gross || gross <= 0) {
+      alert("Please enter your gross salary.");
+      return;
+    }
+
+    const paye = parseFloat(payeDeduction) || 0;
+    const pension = parseFloat(pensionDeduction) || 0;
+    const other = parseFloat(otherDeductions) || 0;
+    const bonus = parseFloat(bonuses) || 0;
+    const totalExpenses = calculateTotalExpenses(salaryExpenses);
+
+    const netSalary = gross - paye - pension - other + bonus;
+    const balanceLeft = netSalary - totalExpenses;
+
+    const newLog = {
+      id: Date.now(),
+      month: monthYear,
+      type: "salary",
+      grossSalary: gross,
+      payeDeduction: paye,
+      pensionDeduction: pension,
+      otherDeductions: other,
+      bonuses: bonus,
+      netSalary: netSalary,
+      expenses: salaryExpenses.filter((e) => e.amount > 0),
+      totalExpenses: totalExpenses,
+      balanceLeft: balanceLeft,
       createdAt: new Date().toISOString(),
     };
 
@@ -143,58 +176,9 @@ export default function SavingsPage() {
     resetForm();
   };
 
-  // --- Open Edit Modal ---
-  const openEditModal = (id) => {
-    const log = salaryLogs.find((l) => l.id === id);
-    if (!log) return;
-
-    setEditingId(id);
-    setEditMonth(log.month);
-    setEditSalary(log.salary);
-    setEditSavings(log.savingsInvested || 0);
-    setEditExpenses(log.expenses || []);
-    setIsEditModalOpen(true);
-    setViewingEntry(null);
-  };
-
-  // --- Save Edit from Modal ---
-  const handleSaveEdit = () => {
-    const salary = parseFloat(editSalary);
-    if (!salary || salary <= 0) {
-      alert("Salary must be greater than 0.");
-      return;
-    }
-
-    const saved = parseFloat(editSavings) || 0;
-    const totalExpenses = calculateTotals(editExpenses);
-    const balanceLeft = salary - totalExpenses - saved;
-
-    const updatedLog = {
-      id: editingId,
-      month: editMonth,
-      salary: salary,
-      savingsInvested: saved,
-      expenses: editExpenses,
-      totalExpenses: totalExpenses,
-      balanceLeft: balanceLeft,
-      createdAt: new Date().toISOString(),
-    };
-
-    updateUserData((d) => ({
-      ...d,
-      salaryLogs: (d.salaryLogs || []).map((log) =>
-        log.id === editingId ? updatedLog : log,
-      ),
-    }));
-
-    setIsEditModalOpen(false);
-    setEditingId(null);
-    showToast("✅ Salary record updated!");
-  };
-
-  // --- Delete from View Modal ---
+  // --- Delete Record ---
   const handleDelete = (id) => {
-    if (!window.confirm("Delete this salary record?")) return;
+    if (!window.confirm("Delete this record?")) return;
     updateUserData((d) => ({
       ...d,
       salaryLogs: (d.salaryLogs || []).filter((l) => l.id !== id),
@@ -209,8 +193,25 @@ export default function SavingsPage() {
     return [...new Set(months)].sort((a, b) => b.localeCompare(a));
   }, [salaryLogs]);
 
+  // --- Calculate preview stats for the current form ---
+  const previewIncome = parseFloat(incomeAmount) || 0;
+  const previewIncomeExpenses = calculateTotalExpenses(incomeExpenses);
+  const previewIncomeBalance =
+    previewIncome - previewIncomeExpenses - (parseFloat(savingsInvested) || 0);
+
+  const previewGross = parseFloat(grossSalary) || 0;
+  const previewDeductions =
+    (parseFloat(payeDeduction) || 0) +
+    (parseFloat(pensionDeduction) || 0) +
+    (parseFloat(otherDeductions) || 0);
+  const previewNet =
+    previewGross - previewDeductions + (parseFloat(bonuses) || 0);
+  const previewSalaryExpenses = calculateTotalExpenses(salaryExpenses);
+  const previewSalaryBalance = previewNet - previewSalaryExpenses;
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 animate-fade-in space-y-6">
+      {/* Toast Notification */}
       {toast && (
         <div className="fixed top-4 right-4 z-50 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-2xl p-4 shadow-lg animate-fade-in flex items-center gap-3">
           <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
@@ -223,137 +224,135 @@ export default function SavingsPage() {
       <div>
         <h1 className="text-2xl font-extrabold text-neutral-text dark:text-white flex items-center gap-2">
           <Wallet className="w-6 h-6 text-primary dark:text-primary-400" />{" "}
-          Salary & Spending Tracker
+          Monthly Ledger
         </h1>
         <p className="text-sm text-gray-500 dark:text-gray-400">
-          Log your monthly salary, track your expenses, and see exactly how much
-          you have left.
+          Professional income & salary tracking with real-time balance
+          calculation.
         </p>
       </div>
 
+      {/* --- TABS --- */}
+      <div className="flex gap-2 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl mb-6">
+        <button
+          onClick={() => setActiveTab("income")}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all ${
+            activeTab === "income"
+              ? "bg-white dark:bg-gray-700 shadow text-primary dark:text-primary-400"
+              : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+          }`}
+        >
+          <Banknote className="w-4 h-4" /> Personal Income
+        </button>
+        <button
+          onClick={() => setActiveTab("salary")}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all ${
+            activeTab === "salary"
+              ? "bg-white dark:bg-gray-700 shadow text-primary dark:text-primary-400"
+              : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+          }`}
+        >
+          <Briefcase className="w-4 h-4" /> Salary (Job)
+        </button>
+      </div>
+
       {/* --- INPUT FORM --- */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-5">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-          <div>
-            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
-              Month
-            </label>
-            {/* 🚨 UPDATED: Calendar icon INSIDE the gray bar */}
-            <div className="relative w-full max-w-full sm:max-w-[200px]">
-              <div className="flex items-center w-full px-4 py-2 bg-gray-200/50 dark:bg-gray-700/50 rounded-xl hover:bg-gray-300/50 dark:hover:bg-gray-600/50 transition-colors cursor-pointer group">
-                <Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400 mr-2 flex-shrink-0" />
-                <input
-                  type="month"
-                  value={monthYear}
-                  onChange={(e) => setMonthYear(e.target.value)}
-                  className="w-full bg-transparent border-none text-gray-800 dark:text-gray-200 focus:outline-none cursor-pointer text-base font-medium placeholder-gray-400"
-                />
-              </div>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-6 transition-all duration-300">
+        <div className="mb-6">
+          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 block">
+            Month
+          </label>
+          <div className="relative w-full max-w-full sm:max-w-[200px]">
+            <div className="flex items-center w-full px-4 py-2 bg-gray-100 dark:bg-gray-700/50 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600/50 transition-colors cursor-pointer group">
+              <Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400 mr-2 flex-shrink-0" />
+              <input
+                type="month"
+                value={monthYear}
+                onChange={(e) => setMonthYear(e.target.value)}
+                className="w-full bg-transparent border-none text-gray-800 dark:text-gray-200 focus:outline-none cursor-pointer text-base font-medium placeholder-gray-400"
+              />
             </div>
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
-              Total Salary (₦)
-            </label>
-            <input
-              type="number"
-              inputMode="numeric"
-              value={salaryAmount}
-              onChange={(e) => setSalaryAmount(e.target.value)}
-              placeholder="e.g. 150000"
-              className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
-            />
           </div>
         </div>
 
-        {/* 🛡️ LOCKED SECTION: Only enabled if Salary > 0 */}
-        <div
-          className={`transition-opacity duration-300 ${!hasValidSalary ? "opacity-50 pointer-events-none" : ""}`}
-        >
-          <div className="mb-4">
-            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
-              Savings & Investments (₦)
-            </label>
-            <div className="relative">
-              <input
-                type="number"
-                inputMode="numeric"
-                value={savingsInvested}
-                onChange={(e) => setSavingsInvested(e.target.value)}
-                placeholder="How much did you save or invest this month?"
-                className="w-full sm:w-1/2 px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
-              />
-              {!hasValidSalary && (
-                <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              )}
-            </div>
-          </div>
-
-          <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300">
-                Monthly Expenses
-              </h3>
-              <button
-                onClick={() =>
-                  setExpenses([
-                    ...expenses,
-                    { id: Date.now(), category: "", amount: 0 },
-                  ])
-                }
-                className="flex items-center gap-1 text-sm font-medium text-primary dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 px-3 py-1.5 rounded-lg transition-colors"
-                disabled={!hasValidSalary}
-              >
-                <Plus className="w-4 h-4" /> Add Expense
-              </button>
-            </div>
-
-            <div className="space-y-2 mb-3">
-              {expenses.map((exp, index) => (
-                <div
-                  key={exp.id}
-                  className="flex flex-col sm:flex-row sm:items-center gap-2 bg-gray-50 dark:bg-gray-700/50 rounded-xl p-2.5"
+        {/* ================= PERSONAL INCOME TAB ================= */}
+        {activeTab === "income" && (
+          <div className="space-y-6">
+            {/* Real-time Summary Bar */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-gray-200 dark:border-gray-600">
+              <div className="text-center">
+                <p className="text-[10px] text-green-600 dark:text-green-400 uppercase font-bold">
+                  Income
+                </p>
+                <p className="text-xl font-bold text-green-600 dark:text-green-400">
+                  {naira(previewIncome)}
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] text-red-500 dark:text-red-400 uppercase font-bold">
+                  Expenses
+                </p>
+                <p className="text-xl font-bold text-red-500 dark:text-red-400">
+                  {naira(previewIncomeExpenses)}
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-bold">
+                  Balance
+                </p>
+                <p
+                  className={`text-xl font-bold ${previewIncomeBalance >= 0 ? "text-primary dark:text-primary-400" : "text-red-600 dark:text-red-400"}`}
                 >
-                  <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-2 w-full">
-                    {index < 3 ? (
-                      <select
-                        value={exp.category}
-                        onChange={(e) =>
-                          setExpenses((prev) =>
-                            prev.map((e) =>
-                              e.id === exp.id
-                                ? { ...e, category: e.target.value }
-                                : e,
-                            ),
-                          )
-                        }
-                        className="w-full sm:w-1/2 px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
-                      >
-                        {DEFAULT_CATEGORIES.map((cat) => (
-                          <option key={cat} value={cat}>
-                            {cat}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <input
-                        type="text"
-                        value={exp.category}
-                        onChange={(e) =>
-                          setExpenses((prev) =>
-                            prev.map((e) =>
-                              e.id === exp.id
-                                ? { ...e, category: e.target.value }
-                                : e,
-                            ),
-                          )
-                        }
-                        placeholder="Enter expense name..."
-                        className="w-full sm:w-1/2 px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
-                      />
-                    )}
-                    <div className="relative flex-1">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 text-sm">
+                  {naira(previewIncomeBalance)}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
+                  Total Monthly Income (₦)
+                </label>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={incomeAmount}
+                  onChange={(e) => setIncomeAmount(e.target.value)}
+                  placeholder="e.g. 150000"
+                  className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
+                  Savings & Investments (₦)
+                </label>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={savingsInvested}
+                  onChange={(e) => setSavingsInvested(e.target.value)}
+                  placeholder="How much did you save or invest?"
+                  className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                />
+              </div>
+            </div>
+
+            {/* Professional Expense Grid */}
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+              <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">
+                Expenses Breakdown
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {incomeExpenses.map((exp, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 bg-gray-50 dark:bg-gray-700/30 rounded-lg px-3 py-2 border border-gray-100 dark:border-gray-600"
+                  >
+                    <span className="flex-1 text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
+                      {exp.category}
+                    </span>
+                    <div className="relative">
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 text-xs">
                         ₦
                       </span>
                       <input
@@ -361,88 +360,201 @@ export default function SavingsPage() {
                         inputMode="numeric"
                         value={exp.amount || ""}
                         onChange={(e) =>
-                          handleExpenseChange(exp.id, e.target.value)
+                          handleExpenseChange(
+                            setIncomeExpenses,
+                            index,
+                            e.target.value,
+                          )
                         }
                         placeholder="0"
-                        className="w-full sm:w-32 pl-7 pr-2 py-1.5 text-sm text-right border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                        className="w-24 pl-5 pr-2 py-1 text-sm text-right bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-1 focus:ring-primary/30 text-gray-800 dark:text-gray-200"
                       />
                     </div>
                   </div>
-                  <button
-                    onClick={() => handleRemoveExpense(exp.id)}
-                    className="w-full sm:w-auto px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-lg transition-colors flex items-center justify-center gap-1"
-                    disabled={!hasValidSalary}
-                  >
-                    <Trash2 className="w-3.5 h-3.5" /> Remove
-                  </button>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
 
-            <div className="flex gap-2 mt-2">
-              <input
-                type="text"
-                value={customCategory}
-                onChange={(e) => setCustomCategory(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleAddExpense()}
-                placeholder="Add custom expense category..."
-                className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
-              />
-              <button
-                onClick={handleAddExpense}
-                className="px-4 py-2 text-sm font-medium bg-primary text-white dark:text-white rounded-lg hover:bg-primary-600 dark:hover:bg-primary-500 transition-colors flex items-center gap-1"
-                disabled={!hasValidSalary}
-              >
-                <Plus className="w-4 h-4" /> Add
-              </button>
-            </div>
+            <button
+              onClick={handleSaveIncome}
+              className="mt-4 w-full flex items-center justify-center gap-2 py-3 bg-primary text-white dark:text-white font-semibold rounded-xl hover:bg-primary-600 dark:hover:bg-primary-500 transition-colors shadow-md"
+            >
+              <CheckCircle2 className="w-5 h-5" /> Log Income & Expenses
+            </button>
           </div>
+        )}
 
-          <div className="mt-4 border-t border-gray-100 dark:border-gray-700 pt-4">
-            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
-              Quick Add Common Expenses
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {DEFAULT_CATEGORIES.filter(
-                (cat) => !expenses.some((e) => e.category === cat),
-              ).map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => handleAddPresetExpense(cat)}
-                  className="px-3 py-1.5 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                  disabled={!hasValidSalary}
+        {/* ================= SALARY (JOB) TAB ================= */}
+        {activeTab === "salary" && (
+          <div className="space-y-6">
+            {/* Real-time Summary Bar */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-gray-200 dark:border-gray-600">
+              <div className="text-center">
+                <p className="text-[10px] text-blue-600 dark:text-blue-400 uppercase font-bold">
+                  Gross
+                </p>
+                <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
+                  {naira(previewGross)}
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] text-red-500 dark:text-red-400 uppercase font-bold">
+                  Deductions
+                </p>
+                <p className="text-xl font-bold text-red-500 dark:text-red-400">
+                  {naira(previewDeductions)}
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] text-green-600 dark:text-green-400 uppercase font-bold">
+                  Net Pay
+                </p>
+                <p className="text-xl font-bold text-green-600 dark:text-green-400">
+                  {naira(previewNet)}
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-bold">
+                  Balance
+                </p>
+                <p
+                  className={`text-xl font-bold ${previewSalaryBalance >= 0 ? "text-primary dark:text-primary-400" : "text-red-600 dark:text-red-400"}`}
                 >
-                  + {cat}
-                </button>
-              ))}
+                  {naira(previewSalaryBalance)}
+                </p>
+              </div>
             </div>
-          </div>
-        </div>
 
-        <button
-          onClick={handleSave}
-          disabled={!hasValidSalary}
-          className={`mt-4 w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold transition-all shadow-md ${
-            hasValidSalary
-              ? "bg-primary text-white dark:text-white hover:bg-primary-600"
-              : "bg-gray-300 text-gray-500 cursor-not-allowed"
-          }`}
-        >
-          <Wallet className="w-5 h-5" /> Log Salary & Expenses
-        </button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
+                  Gross Salary (₦)
+                </label>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={grossSalary}
+                  onChange={(e) => setGrossSalary(e.target.value)}
+                  placeholder="e.g. 200000"
+                  className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
+                  Bonuses & Allowances (₦)
+                </label>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={bonuses}
+                  onChange={(e) => setBonuses(e.target.value)}
+                  placeholder="e.g. 50000"
+                  className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
+                  PAYE / Tax (₦)
+                </label>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={payeDeduction}
+                  onChange={(e) => setPayeDeduction(e.target.value)}
+                  placeholder="Tax deducted"
+                  className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
+                  Pension (₦)
+                </label>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={pensionDeduction}
+                  onChange={(e) => setPensionDeduction(e.target.value)}
+                  placeholder="Pension contribution"
+                  className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
+                  Other Deductions (₦)
+                </label>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={otherDeductions}
+                  onChange={(e) => setOtherDeductions(e.target.value)}
+                  placeholder="Union dues, loans, etc."
+                  className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                />
+              </div>
+            </div>
+
+            {/* Professional Expense Grid */}
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+              <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">
+                Expenses Breakdown
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {salaryExpenses.map((exp, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 bg-gray-50 dark:bg-gray-700/30 rounded-lg px-3 py-2 border border-gray-100 dark:border-gray-600"
+                  >
+                    <span className="flex-1 text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
+                      {exp.category}
+                    </span>
+                    <div className="relative">
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 text-xs">
+                        ₦
+                      </span>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        value={exp.amount || ""}
+                        onChange={(e) =>
+                          handleExpenseChange(
+                            setSalaryExpenses,
+                            index,
+                            e.target.value,
+                          )
+                        }
+                        placeholder="0"
+                        className="w-24 pl-5 pr-2 py-1 text-sm text-right bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-1 focus:ring-primary/30 text-gray-800 dark:text-gray-200"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <button
+              onClick={handleSaveSalary}
+              className="mt-4 w-full flex items-center justify-center gap-2 py-3 bg-primary text-white dark:text-white font-semibold rounded-xl hover:bg-primary-600 dark:hover:bg-primary-500 transition-colors shadow-md"
+            >
+              <CheckCircle2 className="w-5 h-5" /> Log Salary & Expenses
+            </button>
+          </div>
+        )}
       </div>
 
       {/* --- ARCHIVE & HISTORY SECTION --- */}
       <div>
         <h2 className="text-lg font-bold text-neutral-text dark:text-white flex items-center gap-2 mb-4">
           <Calendar className="w-5 h-5 text-primary dark:text-primary-400" />{" "}
-          Salary History
+          History
         </h2>
 
         {salaryLogs.length === 0 ? (
           <div className="bg-gray-50 dark:bg-gray-800/40 rounded-xl p-8 text-center text-gray-400 dark:text-gray-500 border border-dashed dark:border-gray-700">
             <p className="text-sm">
-              No salary records yet. Log your first month above!
+              No records yet. Log your first month above!
             </p>
           </div>
         ) : (
@@ -452,9 +564,13 @@ export default function SavingsPage() {
                 .filter((l) => l.month === month)
                 .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
               const latest = monthLogs[0];
-              const totalExpenses = calculateTotals(latest.expenses || []);
-              const balanceLeft =
-                latest.salary - totalExpenses - (latest.savingsInvested || 0);
+
+              const isIncome = latest.type === "income";
+              const displayIncome = isIncome
+                ? latest.income
+                : latest.netSalary || latest.grossSalary;
+              const displayExpenses = latest.totalExpenses || 0;
+              const displayBalance = latest.balanceLeft || 0;
 
               return (
                 <div
@@ -463,12 +579,19 @@ export default function SavingsPage() {
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                     <div>
-                      <h3 className="font-bold text-neutral-text dark:text-white">
-                        {new Date(month + "-01").toLocaleDateString("en-NG", {
-                          month: "long",
-                          year: "numeric",
-                        })}
-                      </h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-neutral-text dark:text-white">
+                          {new Date(month + "-01").toLocaleDateString("en-NG", {
+                            month: "long",
+                            year: "numeric",
+                          })}
+                        </h3>
+                        <span
+                          className={`text-xs font-bold px-2 py-0.5 rounded-full ${isIncome ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400" : "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"}`}
+                        >
+                          {isIncome ? "Income" : "Salary"}
+                        </span>
+                      </div>
                       <p className="text-xs text-gray-400 dark:text-gray-500">
                         Logged on {formatDate(latest.createdAt)}
                       </p>
@@ -481,10 +604,10 @@ export default function SavingsPage() {
                         <Eye className="w-3.5 h-3.5" /> View
                       </button>
                       <button
-                        onClick={() => openEditModal(latest.id)}
-                        className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-primary dark:text-primary-400 bg-primary-50 dark:bg-primary-900/30 hover:bg-primary-100 dark:hover:bg-primary-900/50 rounded-lg transition-colors"
+                        onClick={() => handleDelete(latest.id)}
+                        className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-lg transition-colors"
                       >
-                        <Edit className="w-3.5 h-3.5" /> Edit
+                        <Trash2 className="w-3.5 h-3.5" /> Delete
                       </button>
                     </div>
                   </div>
@@ -492,10 +615,10 @@ export default function SavingsPage() {
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
                     <div className="bg-green-50/60 dark:bg-green-900/20 rounded-lg p-2 text-center">
                       <p className="text-[10px] text-green-700 dark:text-green-400 uppercase font-semibold">
-                        Salary
+                        {isIncome ? "Income" : "Net Pay"}
                       </p>
                       <p className="font-bold text-green-600 dark:text-green-400 text-sm">
-                        {naira(latest.salary)}
+                        {naira(displayIncome)}
                       </p>
                     </div>
                     <div className="bg-red-50/60 dark:bg-red-900/20 rounded-lg p-2 text-center">
@@ -503,7 +626,7 @@ export default function SavingsPage() {
                         Spent
                       </p>
                       <p className="font-bold text-red-600 dark:text-red-400 text-sm">
-                        {naira(totalExpenses)}
+                        {naira(displayExpenses)}
                       </p>
                     </div>
                     <div className="bg-yellow-50/60 dark:bg-yellow-900/20 rounded-lg p-2 text-center">
@@ -511,12 +634,12 @@ export default function SavingsPage() {
                         Saved
                       </p>
                       <p className="font-bold text-yellow-600 dark:text-yellow-400 text-sm">
-                        {naira(latest.savingsInvested || 0)}
+                        {naira(displayIncome - displayExpenses)}
                       </p>
                     </div>
                     <div
                       className={`${
-                        balanceLeft >= 0
+                        displayBalance >= 0
                           ? "bg-primary-50/60 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400"
                           : "bg-red-50/60 dark:bg-red-900/20 text-red-600 dark:text-red-400"
                       } rounded-lg p-2 text-center`}
@@ -524,7 +647,9 @@ export default function SavingsPage() {
                       <p className="text-[10px] font-semibold uppercase">
                         Balance
                       </p>
-                      <p className="font-bold text-sm">{naira(balanceLeft)}</p>
+                      <p className="font-bold text-sm">
+                        {naira(displayBalance)}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -540,7 +665,9 @@ export default function SavingsPage() {
           <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-700">
               <h3 className="text-lg font-bold text-neutral-text dark:text-white">
-                Salary Breakdown
+                {viewingEntry.type === "income"
+                  ? "Income Breakdown"
+                  : "Salary Breakdown"}
               </h3>
               <button
                 onClick={() => setViewingEntry(null)}
@@ -552,7 +679,7 @@ export default function SavingsPage() {
             <div className="p-5 space-y-3">
               <div className="bg-primary-50 dark:bg-primary-900/30 rounded-xl p-3 text-center">
                 <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                  Month
+                  {viewingEntry.type === "income" ? "Income" : "Salary"} · Month
                 </p>
                 <p className="font-bold text-neutral-text dark:text-white">
                   {new Date(viewingEntry.month + "-01").toLocaleDateString(
@@ -563,15 +690,63 @@ export default function SavingsPage() {
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-3 text-center">
-                  <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                    Salary
-                  </p>
-                  <p className="font-bold text-green-600 dark:text-green-400 text-lg">
-                    {naira(viewingEntry.salary)}
-                  </p>
-                </div>
-                <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-3 text-center">
+                {viewingEntry.type === "salary" ? (
+                  <>
+                    <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3 text-center">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                        Gross Salary
+                      </p>
+                      <p className="font-bold text-blue-600 dark:text-blue-400 text-lg">
+                        {naira(viewingEntry.grossSalary)}
+                      </p>
+                    </div>
+                    <div className="bg-cyan-50 dark:bg-cyan-900/20 rounded-xl p-3 text-center">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                        Bonuses
+                      </p>
+                      <p className="font-bold text-cyan-600 dark:text-cyan-400 text-lg">
+                        {naira(viewingEntry.bonuses || 0)}
+                      </p>
+                    </div>
+                    <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-3 text-center">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                        PAYE / Tax
+                      </p>
+                      <p className="font-bold text-red-600 dark:text-red-400 text-lg">
+                        {naira(viewingEntry.payeDeduction || 0)}
+                      </p>
+                    </div>
+                    <div className="bg-orange-50 dark:bg-orange-900/20 rounded-xl p-3 text-center">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                        Pension
+                      </p>
+                      <p className="font-bold text-orange-600 dark:text-orange-400 text-lg">
+                        {naira(viewingEntry.pensionDeduction || 0)}
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-3 text-center">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                        Total Income
+                      </p>
+                      <p className="font-bold text-green-600 dark:text-green-400 text-lg">
+                        {naira(viewingEntry.income)}
+                      </p>
+                    </div>
+                    <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-xl p-3 text-center">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                        Savings
+                      </p>
+                      <p className="font-bold text-yellow-600 dark:text-yellow-400 text-lg">
+                        {naira(viewingEntry.savingsInvested || 0)}
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-3 text-center col-span-2 sm:col-span-1">
                   <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                     Total Expenses
                   </p>
@@ -579,23 +754,12 @@ export default function SavingsPage() {
                     {naira(viewingEntry.totalExpenses)}
                   </p>
                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-xl p-3 text-center">
-                  <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                    Savings & Investments
-                  </p>
-                  <p className="font-bold text-yellow-600 dark:text-yellow-400 text-lg">
-                    {naira(viewingEntry.savingsInvested || 0)}
-                  </p>
-                </div>
                 <div
                   className={`${
                     viewingEntry.balanceLeft >= 0
                       ? "bg-primary-50 dark:bg-primary-900/30"
                       : "bg-red-50 dark:bg-red-900/30"
-                  } rounded-xl p-3 text-center`}
+                  } rounded-xl p-3 text-center col-span-2 sm:col-span-1`}
                 >
                   <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                     Balance Left
@@ -645,165 +809,6 @@ export default function SavingsPage() {
                 className="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
               >
                 Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* --- ✏️ EDIT MODAL (SCROLLABLE FIX) --- */}
-      {isEditModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/80 p-4 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700 flex flex-col max-h-[90vh]">
-            {/* Sticky Header */}
-            <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
-              <h3 className="text-lg font-bold text-neutral-text dark:text-white">
-                Edit Salary Record
-              </h3>
-              <button
-                onClick={() => setIsEditModalOpen(false)}
-                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-              >
-                <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-              </button>
-            </div>
-
-            {/* 🛡️ SCROLLABLE CONTENT AREA */}
-            <div className="p-5 overflow-y-auto flex-1 space-y-4">
-              <div>
-                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
-                  Month
-                </label>
-                {/* 🚨 UPDATED: Calendar icon INSIDE the gray bar for modal */}
-                <div className="relative w-full max-w-full sm:max-w-[200px]">
-                  <div className="flex items-center w-full px-4 py-2 bg-gray-200/50 dark:bg-gray-700/50 rounded-xl hover:bg-gray-300/50 dark:hover:bg-gray-600/50 transition-colors cursor-pointer group">
-                    <Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400 mr-2 flex-shrink-0" />
-                    <input
-                      type="month"
-                      value={editMonth}
-                      onChange={(e) => setEditMonth(e.target.value)}
-                      className="w-full bg-transparent border-none text-gray-800 dark:text-gray-200 focus:outline-none cursor-pointer text-base font-medium placeholder-gray-400"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
-                  Total Salary (₦)
-                </label>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  value={editSalary}
-                  onChange={(e) => setEditSalary(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
-                  Savings & Investments (₦)
-                </label>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  value={editSavings}
-                  onChange={(e) => setEditSavings(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
-                />
-              </div>
-
-              <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300">
-                    Expenses
-                  </h4>
-                  <button
-                    onClick={() =>
-                      setEditExpenses([
-                        ...editExpenses,
-                        { id: Date.now(), category: "", amount: 0 },
-                      ])
-                    }
-                    className="flex items-center gap-1 text-sm font-medium text-primary dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 px-2 py-1 rounded-lg"
-                  >
-                    <Plus className="w-3.5 h-3.5" /> Add
-                  </button>
-                </div>
-
-                <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
-                  {editExpenses.map((exp) => (
-                    <div
-                      key={exp.id}
-                      className="flex flex-col sm:flex-row sm:items-center gap-2 bg-gray-50 dark:bg-gray-700/50 rounded-xl p-2"
-                    >
-                      <input
-                        type="text"
-                        value={exp.category}
-                        onChange={(e) =>
-                          setEditExpenses((prev) =>
-                            prev.map((e) =>
-                              e.id === exp.id
-                                ? { ...e, category: e.target.value }
-                                : e,
-                            ),
-                          )
-                        }
-                        className="flex-1 px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
-                      />
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
-                          ₦
-                        </span>
-                        <input
-                          type="number"
-                          inputMode="numeric"
-                          value={exp.amount || ""}
-                          onChange={(e) =>
-                            setEditExpenses((prev) =>
-                              prev.map((e) =>
-                                e.id === exp.id
-                                  ? {
-                                      ...e,
-                                      amount: parseFloat(e.target.value) || 0,
-                                    }
-                                  : e,
-                              ),
-                            )
-                          }
-                          className="w-32 pl-7 pr-2 py-1.5 text-sm text-right border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
-                        />
-                      </div>
-                      <button
-                        onClick={() =>
-                          setEditExpenses((prev) =>
-                            prev.filter((e) => e.id !== exp.id),
-                          )
-                        }
-                        className="text-gray-400 hover:text-red-500"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Sticky Footer */}
-            <div className="p-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex flex-col sm:flex-row gap-3 flex-shrink-0">
-              <button
-                onClick={handleSaveEdit}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-primary text-white dark:text-white font-semibold rounded-lg hover:bg-primary-600 transition-colors"
-              >
-                <CheckCircle2 className="w-4 h-4" /> Save Changes
-              </button>
-              <button
-                onClick={() => setIsEditModalOpen(false)}
-                className="flex-1 py-2.5 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
-              >
-                Cancel
               </button>
             </div>
           </div>
