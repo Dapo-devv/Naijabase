@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, Navigate } from "react-router-dom";
 import { Mail, Lock, LogIn } from "lucide-react";
 import { useNaijaBase } from "../context/NaijaBaseContext";
+import LoadingSpinner from "../components/LoadingSpinner";
 
 export default function Login() {
   const { state, login, resetPassword, resendConfirmation } = useNaijaBase();
@@ -130,7 +131,7 @@ export default function Login() {
               className="w-full py-3 bg-primary text-white dark:text-white font-semibold rounded-xl hover:bg-primary-600 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 text-sm"
             >
               {loading ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <LoadingSpinner size={20} color="text-white" />
               ) : (
                 <>
                   <LogIn className="w-4 h-4" /> Log In

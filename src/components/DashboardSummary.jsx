@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { ShoppingCart, MapPin, Flame, Calendar, Briefcase } from "lucide-react";
 import { naira, formatDate, todayISO } from "../utils/constants";
 import { useNaijaBase } from "../context/NaijaBaseContext";
@@ -87,18 +88,31 @@ export default function DashboardSummary() {
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ staggerChildren: 0.1 }}
+      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+    >
       {cards.map((c, i) => {
         const Icon = c.icon;
         return (
-          <div
+          <motion.div
             key={i}
-            className="group bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-lg hover:scale-[1.02] transition-all duration-300 animate-slide-up"
-            style={{ animationDelay: `${i * 60}ms` }}
+            variants={{
+              hidden: { opacity: 0, y: 20 },
+              visible: { opacity: 1, y: 0 },
+            }}
+            whileHover={{ scale: 1.02 }}
+            className="group bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-lg transition-all duration-300"
           >
             <div className="flex items-start justify-between mb-3">
               <div
-                className={`w-10 h-10 rounded-xl flex items-center justify-center ${c.color === "primary" ? "bg-primary-50 dark:bg-primary-900/30 text-primary dark:text-primary-400 group-hover:bg-primary group-hover:text-white transition-colors" : "bg-secondary-50 dark:bg-secondary-900/30 text-secondary-600 dark:text-secondary-400 group-hover:bg-secondary group-hover:text-white transition-colors"}`}
+                className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                  c.color === "primary"
+                    ? "bg-primary-50 dark:bg-primary-900/30 text-primary dark:text-primary-400 group-hover:bg-primary group-hover:text-white transition-colors"
+                    : "bg-secondary-50 dark:bg-secondary-900/30 text-secondary-600 dark:text-secondary-400 group-hover:bg-secondary group-hover:text-white transition-colors"
+                }`}
               >
                 <Icon className="w-5 h-5" />
               </div>
@@ -112,9 +126,9 @@ export default function DashboardSummary() {
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 truncate">
               {c.sub}
             </p>
-          </div>
+          </motion.div>
         );
       })}
-    </div>
+    </motion.div>
   );
 }

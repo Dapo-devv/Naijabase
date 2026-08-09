@@ -10,29 +10,29 @@ import {
   Check,
   Plus,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import AdSlot from "../components/AdSlot";
 import MarketItemList from "../components/MarketItemList";
 import MarketChart from "../components/MarketChart";
 import { useNaijaBase } from "../context/NaijaBaseContext";
 import { formatDate, naira } from "../utils/constants";
+import LoadingSpinner from "../components/LoadingSpinner";
 
 export default function MarketPage() {
   const { currentUser, updateUserData } = useNaijaBase();
   const data = currentUser?.data;
 
-  // --- Main Page State ---
   const [viewingLog, setViewingLog] = useState(null);
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [saved, setSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // --- Edit Modal State ---
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [editPrices, setEditPrices] = useState({});
   const [editDate, setEditDate] = useState("");
   const [editItems, setEditItems] = useState([]);
 
-  // --- Input Form State ---
   const [prices, setPrices] = useState({});
   const [logDate, setLogDate] = useState(
     new Date().toISOString().split("T")[0],
@@ -43,7 +43,6 @@ export default function MarketPage() {
 
   if (!data) return null;
 
-  // --- Load Main Form ---
   useEffect(() => {
     if (justSavedRef.current) return;
     if (!hasLoadedRef.current) {
@@ -53,14 +52,12 @@ export default function MarketPage() {
     }
   }, [data.marketItems]);
 
-  // --- Open Edit Modal ---
   const handleOpenEditModal = (id) => {
     const log = data.marketLogs.find((l) => l.id === id);
     if (!log) return;
 
     setEditingId(id);
     setEditDate(log.date.split("T")[0]);
-    // Load the items and prices exactly as they were saved
     const loadedPrices = {};
     Object.keys(log.prices).forEach((key) => {
       loadedPrices[key] = log.prices[key];
@@ -71,9 +68,7 @@ export default function MarketPage() {
     setViewingLog(null);
   };
 
-  // --- Handle Edit Save ---
-  const handleSaveEdit = () => {
-    // Check if any price is invalid
+  const handleSaveEdit = async () => {
     const hasValidData = editItems.some(
       (item) => parseFloat(editPrices[item]) > 0,
     );
@@ -81,6 +76,9 @@ export default function MarketPage() {
       alert("Please ensure at least one item has a valid price.");
       return;
     }
+
+    setIsSaving(true);
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     const pricesObj = {};
     editItems.forEach((it) => {
@@ -101,13 +99,13 @@ export default function MarketPage() {
       ),
     }));
 
+    setIsSaving(false);
     setEditModalOpen(false);
     setEditingId(null);
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   };
 
-  // --- Handle Delete Inside Modal ---
   const handleDeleteFromModal = () => {
     if (!window.confirm("Delete this expense log?")) return;
     updateUserData((d) => ({
@@ -120,7 +118,6 @@ export default function MarketPage() {
     setTimeout(() => setSaved(false), 2500);
   };
 
-  // --- Modal Item Management ---
   const handleEditPriceChange = (item, val) => {
     setEditPrices((p) => ({ ...p, [item]: val }));
   };
@@ -140,7 +137,6 @@ export default function MarketPage() {
     });
   };
 
-  // --- Main Page Handlers (Logging New Expenses) ---
   const handlePriceChange = (item, val) => {
     setPrices((p) => ({ ...p, [item]: val }));
     setSaved(false);
@@ -167,7 +163,7 @@ export default function MarketPage() {
     });
   };
 
-  const handleLog = () => {
+  const handleLog = async () => {
     if (data.marketItems.length === 0) {
       alert("Please add at least one item before saving.");
       return;
@@ -180,6 +176,9 @@ export default function MarketPage() {
       alert("Please enter at least one price before saving.");
       return;
     }
+
+    setIsSaving(true);
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     const pricesObj = {};
     data.marketItems.forEach((it) => {
@@ -199,6 +198,7 @@ export default function MarketPage() {
       marketItems: [],
     }));
 
+    setIsSaving(false);
     justSavedRef.current = true;
     setSaved(true);
     setPrices({});
@@ -217,7 +217,6 @@ export default function MarketPage() {
     setViewingLog(null);
   };
 
-  // --- Data Sorting & Filtering ---
   const allLogs = data.marketLogs || [];
   const monthKeys = useMemo(
     () =>
@@ -260,7 +259,13 @@ export default function MarketPage() {
   );
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 animate-fade-in space-y-8">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.3 }}
+      className="max-w-4xl mx-auto px-4 py-6 space-y-8"
+    >
       <div>
         <h1 className="text-2xl font-extrabold text-neutral-text dark:text-white flex items-center gap-2 break-words">
           <ShoppingCart className="w-6 h-6 text-primary dark:text-primary-400 flex-shrink-0" />{" "}
@@ -272,13 +277,16 @@ export default function MarketPage() {
         </p>
       </div>
 
-      {/* --- INPUT FORM --- */}
-      <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-5">
+      {/* Input Form */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-5"
+      >
         <div className="mb-4 max-w-full">
           <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block break-words">
             Select Date
           </label>
-          {/* 🚨 FIXED: Calendar icon INSIDE the gray bar */}
           <div className="relative w-full max-w-full sm:max-w-[200px]">
             <div className="flex items-center w-full px-4 py-2 bg-gray-200/50 dark:bg-gray-700/50 rounded-xl hover:bg-gray-300/50 dark:hover:bg-gray-600/50 transition-colors cursor-pointer group">
               <Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400 mr-2 flex-shrink-0" />
@@ -301,17 +309,28 @@ export default function MarketPage() {
         />
         <button
           onClick={handleLog}
-          className="mt-4 w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-primary to-primary-600 text-white dark:text-white font-semibold rounded-xl hover:opacity-90 transition-opacity shadow-md break-words"
+          disabled={isSaving}
+          className="mt-4 w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-primary to-primary-600 text-white dark:text-white font-semibold rounded-xl hover:opacity-90 transition-opacity shadow-md disabled:opacity-70"
         >
-          <Save className="w-5 h-5 flex-shrink-0" />{" "}
-          <span className="break-words">Save Entry</span>
+          {isSaving ? (
+            <LoadingSpinner size={20} color="text-white" />
+          ) : (
+            <Save className="w-5 h-5 flex-shrink-0" />
+          )}
+          <span className="break-words">
+            {isSaving ? "Saving..." : "Save Entry"}
+          </span>
         </button>
         {saved && (
-          <p className="text-center text-sm text-green-600 dark:text-green-400 mt-2 animate-fade-in break-words">
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center text-sm text-green-600 dark:text-green-400 mt-2"
+          >
             ✨ Expense saved successfully!
-          </p>
+          </motion.p>
         )}
-      </div>
+      </motion.div>
 
       <AdSlot width={300} height={250} />
 
@@ -319,7 +338,7 @@ export default function MarketPage() {
         <MarketChart logs={filteredLogs} items={data.marketItems} />
       </div>
 
-      {/* --- HISTORY SECTION --- */}
+      {/* History Section */}
       <div>
         <h2 className="text-lg font-bold text-neutral-text dark:text-white flex items-center gap-2 mb-4 break-words">
           <Calendar className="w-5 h-5 text-primary dark:text-primary-400 flex-shrink-0" />{" "}
@@ -338,8 +357,10 @@ export default function MarketPage() {
                   { month: "long", year: "numeric" },
                 );
                 return (
-                  <button
+                  <motion.button
                     key={month}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={() => setSelectedMonth(month)}
                     className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors break-words ${
                       selectedMonth === month
@@ -348,7 +369,7 @@ export default function MarketPage() {
                     }`}
                   >
                     {label}
-                  </button>
+                  </motion.button>
                 );
               })
             ) : (
@@ -360,7 +381,11 @@ export default function MarketPage() {
         </div>
 
         {selectedMonth && sortedLogs.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6"
+          >
             {[
               {
                 label: "Total Spent",
@@ -389,8 +414,11 @@ export default function MarketPage() {
                 color: "orange",
               },
             ].map((s, i) => (
-              <div
+              <motion.div
                 key={i}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: i * 0.1 }}
                 className={`bg-${s.color}-50/80 dark:bg-${s.color}-900/20 border border-${s.color}-100 dark:border-${s.color}-800 rounded-xl p-3 text-center break-words`}
               >
                 <p
@@ -403,12 +431,20 @@ export default function MarketPage() {
                 >
                   {s.value}
                 </p>
-              </div>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         )}
 
-        <div className="space-y-3">
+        <motion.div
+          className="space-y-3"
+          initial="hidden"
+          animate="visible"
+          variants={{
+            hidden: { opacity: 0 },
+            visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
+          }}
+        >
           {sortedLogs.length ? (
             sortedLogs.map((log) => {
               const dailyTotal = Object.values(log.prices).reduce(
@@ -416,8 +452,12 @@ export default function MarketPage() {
                 0,
               );
               return (
-                <div
+                <motion.div
                   key={log.id}
+                  variants={{
+                    hidden: { opacity: 0, y: 10 },
+                    visible: { opacity: 1, y: 0 },
+                  }}
                   className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-100 dark:border-gray-700 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm hover:shadow-md transition-shadow"
                 >
                   <div className="flex-1 min-w-0">
@@ -430,26 +470,32 @@ export default function MarketPage() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <button
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                       onClick={() => setViewingLog(log)}
                       className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-lg transition-colors break-words"
                     >
                       <Eye className="w-3.5 h-3.5 flex-shrink-0" /> View
-                    </button>
-                    <button
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                       onClick={() => handleOpenEditModal(log.id)}
                       className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-primary dark:text-primary-400 bg-primary-50 dark:bg-primary-900/30 hover:bg-primary-100 dark:hover:bg-primary-900/50 rounded-lg transition-colors break-words"
                     >
                       <Pencil className="w-3.5 h-3.5 flex-shrink-0" /> Edit
-                    </button>
-                    <button
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                       onClick={() => handleDeleteLog(log.id)}
                       className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-lg transition-colors break-words"
                     >
                       <Trash2 className="w-3.5 h-3.5 flex-shrink-0" /> Delete
-                    </button>
+                    </motion.button>
                   </div>
-                </div>
+                </motion.div>
               );
             })
           ) : (
@@ -466,191 +512,243 @@ export default function MarketPage() {
               </p>
             </div>
           )}
-        </div>
+        </motion.div>
       </div>
 
-      {/* --- VIEW MODAL --- */}
-      {viewingLog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/80 p-4 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-700">
-              <h3 className="text-lg font-bold text-neutral-text dark:text-white break-words">
-                Expense Details
-              </h3>
-              <button
-                onClick={() => setViewingLog(null)}
-                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-              >
-                <X className="w-5 h-5 text-gray-500 dark:text-gray-400 flex-shrink-0" />
-              </button>
-            </div>
-            <div className="p-5 space-y-4">
-              <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3 break-words">
-                <span className="text-sm text-gray-500 dark:text-gray-400">
-                  Date
-                </span>
-                <span className="font-semibold text-gray-800 dark:text-gray-200 break-words">
-                  {formatDate(viewingLog.date)}
-                </span>
+      {/* View Modal */}
+      <AnimatePresence>
+        {viewingLog && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/80 p-4 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: "spring", damping: 20 }}
+              className="bg-white dark:bg-gray-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700"
+            >
+              <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-700">
+                <h3 className="text-lg font-bold text-neutral-text dark:text-white break-words">
+                  Expense Details
+                </h3>
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setViewingLog(null)}
+                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                >
+                  <X className="w-5 h-5 text-gray-500 dark:text-gray-400 flex-shrink-0" />
+                </motion.button>
               </div>
-              <div className="flex justify-between items-center bg-primary-50 dark:bg-primary-900/30 rounded-xl p-3 break-words">
-                <span className="text-sm text-primary-600 dark:text-primary-400">
-                  Total Spent
-                </span>
-                <span className="font-bold text-primary dark:text-primary-400 text-lg break-words">
-                  {naira(
-                    Object.values(viewingLog.prices).reduce((a, b) => a + b, 0),
-                  )}
-                </span>
-              </div>
-              <div className="border-t border-gray-100 dark:border-gray-700 pt-3">
-                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 break-words">
-                  Purchase Breakdown
-                </p>
-                <div className="space-y-1.5">
-                  {Object.entries(viewingLog.prices).map(([item, price]) => (
-                    <div
-                      key={item}
-                      className="flex justify-between text-sm py-1 border-b border-gray-50 dark:border-gray-700/50 last:border-0 break-words"
-                    >
-                      <span className="text-gray-700 dark:text-gray-300 break-words">
-                        {item}
-                      </span>
-                      <span className="font-medium text-gray-900 dark:text-white break-words">
-                        {naira(price)}
-                      </span>
-                    </div>
-                  ))}
+              <div className="p-5 space-y-4">
+                <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3 break-words">
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    Date
+                  </span>
+                  <span className="font-semibold text-gray-800 dark:text-gray-200 break-words">
+                    {formatDate(viewingLog.date)}
+                  </span>
                 </div>
-              </div>
-            </div>
-            <div className="p-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 text-center">
-              <button
-                onClick={() => setViewingLog(null)}
-                className="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors break-words"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* --- 🚀 FULLY EDITABLE MODAL --- */}
-      {editModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/80 p-4 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700 max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
-              <h3 className="text-lg font-bold text-neutral-text dark:text-white break-words">
-                Edit Expense
-              </h3>
-              <button
-                onClick={() => setEditModalOpen(false)}
-                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-              >
-                <X className="w-5 h-5 text-gray-500 dark:text-gray-400 flex-shrink-0" />
-              </button>
-            </div>
-
-            <div className="p-5 overflow-y-auto flex-1">
-              <div className="mb-4">
-                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block break-words">
-                  Date
-                </label>
-                {/* 🚨 FIXED: Calendar icon INSIDE the gray bar for modal */}
-                <div className="relative w-full max-w-full">
-                  <div className="flex items-center w-full px-4 py-2 bg-gray-200/50 dark:bg-gray-700/50 rounded-xl hover:bg-gray-300/50 dark:hover:bg-gray-600/50 transition-colors cursor-pointer group">
-                    <Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400 mr-2 flex-shrink-0" />
-                    <input
-                      type="date"
-                      value={editDate}
-                      onChange={(e) => setEditDate(e.target.value)}
-                      className="w-full bg-transparent border-none text-gray-800 dark:text-gray-200 focus:outline-none cursor-pointer text-base font-medium placeholder-gray-400"
-                    />
+                <div className="flex justify-between items-center bg-primary-50 dark:bg-primary-900/30 rounded-xl p-3 break-words">
+                  <span className="text-sm text-primary-600 dark:text-primary-400">
+                    Total Spent
+                  </span>
+                  <span className="font-bold text-primary dark:text-primary-400 text-lg break-words">
+                    {naira(
+                      Object.values(viewingLog.prices).reduce(
+                        (a, b) => a + b,
+                        0,
+                      ),
+                    )}
+                  </span>
+                </div>
+                <div className="border-t border-gray-100 dark:border-gray-700 pt-3">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 break-words">
+                    Purchase Breakdown
+                  </p>
+                  <div className="space-y-1.5">
+                    {Object.entries(viewingLog.prices).map(([item, price]) => (
+                      <div
+                        key={item}
+                        className="flex justify-between text-sm py-1 border-b border-gray-50 dark:border-gray-700/50 last:border-0 break-words"
+                      >
+                        <span className="text-gray-700 dark:text-gray-300 break-words">
+                          {item}
+                        </span>
+                        <span className="font-medium text-gray-900 dark:text-white break-words">
+                          {naira(price)}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
+              <div className="p-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 text-center">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setViewingLog(null)}
+                  className="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors break-words"
+                >
+                  Close
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-              {/* Editable Item List */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 break-words">
-                    Items
-                  </h4>
-                  <button
-                    onClick={() => {
-                      const newItem = prompt("Enter new item name:");
-                      if (newItem?.trim()) handleEditAddItem(newItem.trim());
-                    }}
-                    className="flex items-center gap-1 text-sm font-medium text-primary dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 px-2 py-1 rounded-lg transition-colors break-words"
-                  >
-                    <Plus className="w-3.5 h-3.5 flex-shrink-0" /> Add
-                  </button>
+      {/* Edit Modal */}
+      <AnimatePresence>
+        {editModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/80 p-4 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: "spring", damping: 20 }}
+              className="bg-white dark:bg-gray-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700 max-h-[90vh] flex flex-col"
+            >
+              <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
+                <h3 className="text-lg font-bold text-neutral-text dark:text-white break-words">
+                  Edit Expense
+                </h3>
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setEditModalOpen(false)}
+                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                >
+                  <X className="w-5 h-5 text-gray-500 dark:text-gray-400 flex-shrink-0" />
+                </motion.button>
+              </div>
+
+              <div className="p-5 overflow-y-auto flex-1">
+                <div className="mb-4">
+                  <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block break-words">
+                    Date
+                  </label>
+                  <div className="relative w-full max-w-full">
+                    <div className="flex items-center w-full px-4 py-2 bg-gray-200/50 dark:bg-gray-700/50 rounded-xl hover:bg-gray-300/50 dark:hover:bg-gray-600/50 transition-colors cursor-pointer group">
+                      <Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400 mr-2 flex-shrink-0" />
+                      <input
+                        type="date"
+                        value={editDate}
+                        onChange={(e) => setEditDate(e.target.value)}
+                        className="w-full bg-transparent border-none text-gray-800 dark:text-gray-200 focus:outline-none cursor-pointer text-base font-medium placeholder-gray-400"
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                {editItems.length === 0 ? (
-                  <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4 break-words">
-                    No items. Add one above.
-                  </p>
-                ) : (
-                  editItems.map((item) => (
-                    <div
-                      key={item}
-                      className="flex items-center gap-2 bg-gray-50 dark:bg-gray-700/50 rounded-xl p-2.5"
+                {/* Editable Item List */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 break-words">
+                      Items
+                    </h4>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => {
+                        const newItem = prompt("Enter new item name:");
+                        if (newItem?.trim()) handleEditAddItem(newItem.trim());
+                      }}
+                      className="flex items-center gap-1 text-sm font-medium text-primary dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 px-2 py-1 rounded-lg transition-colors break-words"
                     >
-                      <span className="flex-1 text-sm font-medium text-gray-700 dark:text-gray-300 break-words">
-                        {item}
-                      </span>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 text-sm">
-                          ₦
-                        </span>
-                        <input
-                          type="number"
-                          inputMode="numeric"
-                          value={editPrices[item] ?? ""}
-                          onChange={(e) =>
-                            handleEditPriceChange(item, e.target.value)
-                          }
-                          placeholder="0"
-                          className="w-32 pl-7 pr-2 py-1.5 text-sm text-right border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
-                        />
-                      </div>
-                      <button
-                        onClick={() => handleEditRemoveItem(item)}
-                        className="w-8 h-8 flex items-center justify-center text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-                      >
-                        <X className="w-4 h-4 flex-shrink-0" />
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
+                      <Plus className="w-3.5 h-3.5 flex-shrink-0" /> Add
+                    </motion.button>
+                  </div>
 
-            <div className="p-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex flex-col sm:flex-row gap-3 flex-shrink-0">
-              <button
-                onClick={handleSaveEdit}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-primary text-white dark:text-white font-semibold rounded-lg hover:bg-primary-600 dark:hover:bg-primary-500 transition-colors break-words"
-              >
-                <Check className="w-4 h-4 flex-shrink-0" /> Save Changes
-              </button>
-              <button
-                onClick={handleDeleteFromModal}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 font-semibold rounded-lg hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors break-words"
-              >
-                <Trash2 className="w-4 h-4 flex-shrink-0" /> Delete
-              </button>
-              <button
-                onClick={() => setEditModalOpen(false)}
-                className="flex-1 py-2.5 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors break-words"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+                  {editItems.length === 0 ? (
+                    <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4 break-words">
+                      No items. Add one above.
+                    </p>
+                  ) : (
+                    editItems.map((item) => (
+                      <motion.div
+                        key={item}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="flex items-center gap-2 bg-gray-50 dark:bg-gray-700/50 rounded-xl p-2.5"
+                      >
+                        <span className="flex-1 text-sm font-medium text-gray-700 dark:text-gray-300 break-words">
+                          {item}
+                        </span>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 text-sm">
+                            ₦
+                          </span>
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            value={editPrices[item] ?? ""}
+                            onChange={(e) =>
+                              handleEditPriceChange(item, e.target.value)
+                            }
+                            placeholder="0"
+                            className="w-32 pl-7 pr-2 py-1.5 text-sm text-right border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                          />
+                        </div>
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={() => handleEditRemoveItem(item)}
+                          className="w-8 h-8 flex items-center justify-center text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                        >
+                          <X className="w-4 h-4 flex-shrink-0" />
+                        </motion.button>
+                      </motion.div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="p-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex flex-col sm:flex-row gap-3 flex-shrink-0">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleSaveEdit}
+                  disabled={isSaving}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-primary text-white dark:text-white font-semibold rounded-lg hover:bg-primary-600 dark:hover:bg-primary-500 transition-colors disabled:opacity-70 break-words"
+                >
+                  {isSaving ? (
+                    <LoadingSpinner size={20} color="text-white" />
+                  ) : (
+                    <Check className="w-4 h-4 flex-shrink-0" />
+                  )}
+                  {isSaving ? "Saving..." : "Save Changes"}
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleDeleteFromModal}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 font-semibold rounded-lg hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors break-words"
+                >
+                  <Trash2 className="w-4 h-4 flex-shrink-0" /> Delete
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setEditModalOpen(false)}
+                  className="flex-1 py-2.5 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors break-words"
+                >
+                  Cancel
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }

@@ -17,9 +17,11 @@ import {
   CheckCircle2,
   Filter,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import AdSlot from "../components/AdSlot";
 import { useNaijaBase } from "../context/NaijaBaseContext";
 import { todayISO, formatDate, naira } from "../utils/constants";
+import LoadingSpinner from "../components/LoadingSpinner";
 
 export default function FinanceHubPage() {
   const { currentUser, updateUserData } = useNaijaBase();
@@ -28,59 +30,56 @@ export default function FinanceHubPage() {
 
   const [viewingEntry, setViewingEntry] = useState(null);
   const [activeTab, setActiveTab] = useState("overview");
-
-  // --- Month Archive State ---
   const [selectedMonth, setSelectedMonth] = useState(null);
-
-  // --- Expanded All-Time Revenue State ---
   const [showAllTimeBreakdown, setShowAllTimeBreakdown] = useState(false);
-
-  // --- 🚀 NEW: Filter States ---
   const [filterType, setFilterType] = useState("all");
   const [filterDuration, setFilterDuration] = useState("thisMonth");
 
-  // --- Company Name State ---
   const [companyName, setCompanyName] = useState(g?.companyName || "");
   const [isCompanyEditing, setIsCompanyEditing] = useState(!g?.companyName);
 
-  // --- Sales Form States ---
+  // Sales Form States
   const [saleDate, setSaleDate] = useState(todayISO());
   const [saleCustomer, setSaleCustomer] = useState("");
   const [saleProduct, setSaleProduct] = useState("");
   const [saleContact, setSaleContact] = useState("");
   const [saleAmount, setSaleAmount] = useState("");
 
-  // --- Expense Form States ---
+  // Expense Form States
   const [expenseDate, setExpenseDate] = useState(todayISO());
   const [expenseCategory, setExpenseCategory] = useState("Supplies");
   const [expenseTitle, setExpenseTitle] = useState("");
   const [expenseAmount, setExpenseAmount] = useState("");
 
-  // --- Staff Salary States ---
+  // Staff Salary States
   const [staffDate, setStaffDate] = useState(todayISO());
   const [staffName, setStaffName] = useState("");
   const [staffAmount, setStaffAmount] = useState("");
 
-  // --- Savings / Investment States ---
+  // Savings / Investment States
   const [savingsDate, setSavingsDate] = useState(todayISO());
   const [savingsType, setSavingsType] = useState("Savings");
   const [savingsTitle, setSavingsTitle] = useState("");
   const [savingsAmount, setSavingsAmount] = useState("");
 
-  // --- Edit Modal States ---
+  // Edit Modal States
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState(null);
 
-  // --- Toast State ---
+  // Toast State
   const [toast, setToast] = useState(null);
-
-  // --- Force re-render key ---
   const [renderKey, setRenderKey] = useState(0);
 
-  // --- Get business data safely ---
+  // Loading states for each action
+  const [isSavingSale, setIsSavingSale] = useState(false);
+  const [isSavingExpense, setIsSavingExpense] = useState(false);
+  const [isSavingStaff, setIsSavingStaff] = useState(false);
+  const [isSavingSavings, setIsSavingSavings] = useState(false);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+
   const businessEntries = g.businessEntries || [];
 
-  // --- 🚀 FILTER LOGIC ---
+  // --- Filter Logic ---
   const getDateRange = (duration) => {
     const now = new Date();
     const start = new Date();
@@ -96,7 +95,7 @@ export default function FinanceHubPage() {
         start.setMonth(now.getMonth() - 3);
         break;
       case "allTime":
-        return null; // No start date restriction
+        return null;
       default:
         start.setMonth(now.getMonth());
         start.setDate(1);
@@ -109,26 +108,23 @@ export default function FinanceHubPage() {
     let entries = [...businessEntries];
     const dateLimit = getDateRange(filterDuration);
 
-    // Filter by Type
     if (filterType !== "all") {
       entries = entries.filter((e) => e.type === filterType);
     }
 
-    // Filter by Duration
     if (dateLimit) {
       entries = entries.filter((e) => e.date >= dateLimit);
     }
 
-    // Sort by date (Newest first)
     return entries.sort((a, b) => b.date.localeCompare(a.date));
   }, [businessEntries, filterType, filterDuration]);
 
-  // --- ALL-TIME REVENUE ---
+  // --- All-Time Revenue ---
   const allTimeRevenue = businessEntries
     .filter((e) => e.type === "sale")
     .reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
 
-  // --- CURRENT MONTH FINANCIALS (Keep this for the Overview Cards) ---
+  // --- Current Month Financials ---
   const currentMonth = todayISO().slice(0, 7);
 
   const monthlyRevenue = businessEntries
@@ -147,7 +143,6 @@ export default function FinanceHubPage() {
     .filter((e) => e.type === "savings" && e.date.startsWith(currentMonth))
     .reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
 
-  // 🚨 UPDATED: Calculates the exact balance left after ALL expenses and savings
   const balanceLeft =
     monthlyRevenue - monthlyExpenses - monthlyStaffCost - monthlySavings;
 
@@ -246,7 +241,7 @@ export default function FinanceHubPage() {
   };
 
   // --- Handle Sales ---
-  const handleAddSale = () => {
+  const handleAddSale = async () => {
     if (
       !saleCustomer.trim() ||
       !saleProduct.trim() ||
@@ -256,6 +251,8 @@ export default function FinanceHubPage() {
       alert("Please fill in Customer, Product/Service, and Amount.");
       return;
     }
+    setIsSavingSale(true);
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     const newEntry = {
       id: Date.now(),
@@ -277,19 +274,19 @@ export default function FinanceHubPage() {
       },
     }));
 
+    setIsSavingSale(false);
     setSaleCustomer("");
     setSaleProduct("");
     setSaleContact("");
     setSaleAmount("");
     setSaleDate(todayISO());
-
     setActiveTab("overview");
     setRenderKey(Date.now());
     showToast("✅ Sale saved!");
   };
 
   // --- Handle Expenses ---
-  const handleAddExpense = () => {
+  const handleAddExpense = async () => {
     if (
       !expenseTitle.trim() ||
       !expenseAmount ||
@@ -298,6 +295,8 @@ export default function FinanceHubPage() {
       alert("Please enter a valid expense title and amount.");
       return;
     }
+    setIsSavingExpense(true);
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     const newEntry = {
       id: Date.now(),
@@ -317,21 +316,23 @@ export default function FinanceHubPage() {
       },
     }));
 
+    setIsSavingExpense(false);
     setExpenseTitle("");
     setExpenseAmount("");
     setExpenseDate(todayISO());
-
     setActiveTab("overview");
     setRenderKey(Date.now());
     showToast("✅ Expense saved!");
   };
 
   // --- Handle Staff Salary ---
-  const handleAddStaff = () => {
+  const handleAddStaff = async () => {
     if (!staffName.trim() || !staffAmount || parseFloat(staffAmount) <= 0) {
       alert("Please enter staff name and salary amount.");
       return;
     }
+    setIsSavingStaff(true);
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     const newEntry = {
       id: Date.now(),
@@ -351,17 +352,17 @@ export default function FinanceHubPage() {
       },
     }));
 
+    setIsSavingStaff(false);
     setStaffName("");
     setStaffAmount("");
     setStaffDate(todayISO());
-
     setActiveTab("overview");
     setRenderKey(Date.now());
     showToast("✅ Staff salary saved!");
   };
 
   // --- Handle Savings / Investment ---
-  const handleAddSavings = () => {
+  const handleAddSavings = async () => {
     if (
       !savingsTitle.trim() ||
       !savingsAmount ||
@@ -370,6 +371,8 @@ export default function FinanceHubPage() {
       alert("Please enter a title and amount for savings/investment.");
       return;
     }
+    setIsSavingSavings(true);
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     const newEntry = {
       id: Date.now(),
@@ -389,10 +392,10 @@ export default function FinanceHubPage() {
       },
     }));
 
+    setIsSavingSavings(false);
     setSavingsTitle("");
     setSavingsAmount("");
     setSavingsDate(todayISO());
-
     setActiveTab("overview");
     setRenderKey(Date.now());
     showToast("✅ Savings saved!");
@@ -405,7 +408,7 @@ export default function FinanceHubPage() {
   };
 
   // --- Save Edit ---
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editForm) return;
 
     if (editForm.type === "sale") {
@@ -441,6 +444,9 @@ export default function FinanceHubPage() {
       }
     }
 
+    setIsSavingEdit(true);
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
     updateUserData((d) => ({
       ...d,
       generator: {
@@ -451,6 +457,7 @@ export default function FinanceHubPage() {
       },
     }));
 
+    setIsSavingEdit(false);
     setIsEditing(false);
     setViewingEntry({ ...editForm });
     setRenderKey(Date.now());
@@ -483,15 +490,25 @@ export default function FinanceHubPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 animate-fade-in space-y-6">
-      {/* 🚀 Toast Notification */}
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.3 }}
+      className="max-w-4xl mx-auto px-4 py-6 space-y-6"
+    >
       {toast && (
-        <div className="fixed top-4 right-4 z-50 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-2xl p-4 shadow-lg animate-fade-in flex items-center gap-3">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.9 }}
+          className="fixed top-4 right-4 z-50 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-2xl p-4 shadow-lg flex items-center gap-3"
+        >
           <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
           <span className="text-sm font-medium text-green-800 dark:text-green-200">
             {toast}
           </span>
-        </div>
+        </motion.div>
       )}
 
       <div>
@@ -506,42 +523,44 @@ export default function FinanceHubPage() {
       </div>
 
       {/* --- Navigation Tabs --- */}
-      <div className="flex flex-wrap gap-2 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
-        <button
-          onClick={() => setActiveTab("overview")}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all ${activeTab === "overview" ? "bg-white dark:bg-gray-700 shadow text-primary dark:text-primary-400" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"}`}
-        >
-          <Wallet className="w-4 h-4" /> Overview
-        </button>
-        <button
-          onClick={() => setActiveTab("sales")}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all ${activeTab === "sales" ? "bg-white dark:bg-gray-700 shadow text-primary dark:text-primary-400" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"}`}
-        >
-          <TrendingUp className="w-4 h-4" /> Sales
-        </button>
-        <button
-          onClick={() => setActiveTab("expenses")}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all ${activeTab === "expenses" ? "bg-white dark:bg-gray-700 shadow text-primary dark:text-primary-400" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"}`}
-        >
-          <TrendingDown className="w-4 h-4" /> Expenses
-        </button>
-        <button
-          onClick={() => setActiveTab("staff")}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all ${activeTab === "staff" ? "bg-white dark:bg-gray-700 shadow text-primary dark:text-primary-400" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"}`}
-        >
-          <Users className="w-4 h-4" /> Staff
-        </button>
-        <button
-          onClick={() => setActiveTab("savings")}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all ${activeTab === "savings" ? "bg-white dark:bg-gray-700 shadow text-primary dark:text-primary-400" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"}`}
-        >
-          <PiggyBank className="w-4 h-4" /> Savings
-        </button>
-      </div>
+      <motion.div
+        className="flex flex-wrap gap-2 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+      >
+        {[
+          { id: "overview", label: "Overview", icon: Wallet },
+          { id: "sales", label: "Sales", icon: TrendingUp },
+          { id: "expenses", label: "Expenses", icon: TrendingDown },
+          { id: "staff", label: "Staff", icon: Users },
+          { id: "savings", label: "Savings", icon: PiggyBank },
+        ].map((tab) => {
+          const Icon = tab.icon;
+          return (
+            <motion.button
+              key={tab.id}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all ${
+                activeTab === tab.id
+                  ? "bg-white dark:bg-gray-700 shadow text-primary dark:text-primary-400"
+                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+              }`}
+            >
+              <Icon className="w-4 h-4" /> {tab.label}
+            </motion.button>
+          );
+        })}
+      </motion.div>
 
       {/* --- Overview Tab --- */}
       {activeTab === "overview" && (
-        <div className="space-y-6">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="space-y-6"
+        >
           {/* ✏️ Company Name */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-5">
             <div className="flex items-center gap-3">
@@ -565,19 +584,23 @@ export default function FinanceHubPage() {
                   )}
 
                   {isCompanyEditing ? (
-                    <button
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                       onClick={handleSaveCompany}
                       className="px-4 py-2 bg-primary text-white dark:text-primary-400 text-sm font-semibold rounded-lg hover:bg-primary-600 dark:hover:bg-primary-500 transition-colors"
                     >
                       Save
-                    </button>
+                    </motion.button>
                   ) : (
-                    <button
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                       onClick={() => setIsCompanyEditing(true)}
                       className="p-2 text-gray-400 dark:text-gray-500 hover:text-primary dark:hover:text-primary-400 transition-colors"
                     >
                       <Pencil className="w-4 h-4" />
-                    </button>
+                    </motion.button>
                   )}
                 </div>
               </div>
@@ -585,56 +608,79 @@ export default function FinanceHubPage() {
           </div>
 
           {/* Monthly Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-2xl p-5 text-center">
-              <p className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wide">
-                Monthly Revenue
-              </p>
-              <p className="text-3xl font-extrabold text-green-600 dark:text-green-400 mt-1">
-                {naira(monthlyRevenue)}
-              </p>
-            </div>
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-5 text-center">
-              <p className="text-xs font-semibold text-red-700 dark:text-red-400 uppercase tracking-wide">
-                Monthly Expenses
-              </p>
-              <p className="text-3xl font-extrabold text-red-600 dark:text-red-400 mt-1">
-                {naira(monthlyExpenses)}
-              </p>
-            </div>
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-5 text-center">
-              <p className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wide">
-                Monthly Staff Costs
-              </p>
-              <p className="text-3xl font-extrabold text-blue-600 dark:text-blue-400 mt-1">
-                {naira(monthlyStaffCost)}
-              </p>
-            </div>
-            <div className="bg-gray-50 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 rounded-2xl p-5 text-center col-span-1 sm:col-span-2 lg:col-span-1">
-              <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-                Balance Left
-              </p>
-              <p
-                className={`text-3xl font-extrabold mt-1 ${balanceLeft >= 0 ? "text-primary dark:text-primary-400" : "text-red-600 dark:text-red-400"}`}
+          <motion.div
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+            initial="hidden"
+            animate="visible"
+            variants={{
+              hidden: { opacity: 0 },
+              visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
+            }}
+          >
+            {[
+              {
+                label: "Monthly Revenue",
+                value: naira(monthlyRevenue),
+                color: "green",
+              },
+              {
+                label: "Monthly Expenses",
+                value: naira(monthlyExpenses),
+                color: "red",
+              },
+              {
+                label: "Monthly Staff Costs",
+                value: naira(monthlyStaffCost),
+                color: "blue",
+              },
+              {
+                label: "Balance Left",
+                value:
+                  balanceLeft >= 0
+                    ? naira(balanceLeft)
+                    : `-${naira(Math.abs(balanceLeft))}`,
+                color: balanceLeft >= 0 ? "primary" : "red",
+              },
+            ].map((card, idx) => (
+              <motion.div
+                key={idx}
+                variants={{
+                  hidden: { opacity: 0, y: 10 },
+                  visible: { opacity: 1, y: 0 },
+                }}
+                className={`bg-${card.color}-50 dark:bg-${card.color}-900/20 border border-${card.color}-200 dark:border-${card.color}-800 rounded-2xl p-5 text-center`}
               >
-                {balanceLeft >= 0 ? "" : "-"}
-                {naira(Math.abs(balanceLeft))}
-              </p>
-            </div>
-          </div>
+                <p
+                  className={`text-xs font-semibold text-${card.color}-700 dark:text-${card.color}-400 uppercase tracking-wide`}
+                >
+                  {card.label}
+                </p>
+                <p
+                  className={`text-3xl font-extrabold text-${card.color}-600 dark:text-${card.color}-400 mt-1`}
+                >
+                  {card.value}
+                </p>
+              </motion.div>
+            ))}
+          </motion.div>
 
           {/* Monthly Savings Card */}
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-2xl p-5 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-2xl p-5 text-center"
+          >
             <p className="text-xs font-semibold text-yellow-700 dark:text-yellow-400 uppercase tracking-wide">
               Monthly Savings & Investments
             </p>
             <p className="text-3xl font-extrabold text-yellow-600 dark:text-yellow-400 mt-1">
               {naira(monthlySavings)}
             </p>
-          </div>
+          </motion.div>
 
           {/* Clickable All-Time Revenue */}
-          <div
+          <motion.div
+            whileHover={{ scale: 1.01 }}
             className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-2xl p-5 text-center cursor-pointer hover:shadow-md transition-shadow"
             onClick={() => setShowAllTimeBreakdown(!showAllTimeBreakdown)}
           >
@@ -651,44 +697,53 @@ export default function FinanceHubPage() {
             <p className="text-4xl font-extrabold text-green-600 dark:text-green-400 mt-1">
               {naira(allTimeRevenue)}
             </p>
-          </div>
+          </motion.div>
 
           {/* Expanded Monthly Revenue Breakdown */}
-          {showAllTimeBreakdown && (
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-5 animate-fade-in shadow-sm">
-              <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
-                Monthly Sales Breakdown
-              </h4>
-              <div className="space-y-2">
-                {monthlyRevenueBreakdown.length === 0 ? (
-                  <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-2">
-                    No sales recorded yet.
-                  </p>
-                ) : (
-                  monthlyRevenueBreakdown.map(([month, total]) => {
-                    const dateObj = new Date(month + "-01");
-                    const label = dateObj.toLocaleDateString("en-NG", {
-                      month: "short",
-                      year: "numeric",
-                    });
-                    return (
-                      <div
-                        key={month}
-                        className="flex justify-between items-center py-2 border-b border-gray-50 dark:border-gray-700 last:border-0"
-                      >
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          {label}
-                        </span>
-                        <span className="text-sm font-bold text-green-600 dark:text-green-400">
-                          {naira(total)}
-                        </span>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-          )}
+          <AnimatePresence>
+            {showAllTimeBreakdown && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-5 shadow-sm"
+              >
+                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
+                  Monthly Sales Breakdown
+                </h4>
+                <div className="space-y-2">
+                  {monthlyRevenueBreakdown.length === 0 ? (
+                    <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-2">
+                      No sales recorded yet.
+                    </p>
+                  ) : (
+                    monthlyRevenueBreakdown.map(([month, total]) => {
+                      const dateObj = new Date(month + "-01");
+                      const label = dateObj.toLocaleDateString("en-NG", {
+                        month: "short",
+                        year: "numeric",
+                      });
+                      return (
+                        <motion.div
+                          key={month}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          className="flex justify-between items-center py-2 border-b border-gray-50 dark:border-gray-700 last:border-0"
+                        >
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            {label}
+                          </span>
+                          <span className="text-sm font-bold text-green-600 dark:text-green-400">
+                            {naira(total)}
+                          </span>
+                        </motion.div>
+                      );
+                    })
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Month Selection Buttons */}
           {monthKeys.length > 0 && (
@@ -704,8 +759,10 @@ export default function FinanceHubPage() {
                     year: "numeric",
                   });
                   return (
-                    <button
+                    <motion.button
                       key={month}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                       onClick={() => setSelectedMonth(month)}
                       className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                         selectedMonth === month
@@ -714,18 +771,22 @@ export default function FinanceHubPage() {
                       }`}
                     >
                       {label}
-                    </button>
+                    </motion.button>
                   );
                 })}
               </div>
             </div>
           )}
-        </div>
+        </motion.div>
       )}
 
       {/* --- Monthly Archive View --- */}
       {selectedMonth && activeTab === "overview" && (
-        <div className="mt-6">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="mt-6"
+        >
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold text-neutral-text dark:text-white flex items-center gap-2">
               <Calendar className="w-5 h-5 text-primary dark:text-primary-400" />
@@ -734,84 +795,92 @@ export default function FinanceHubPage() {
                 year: "numeric",
               })}
             </h2>
-            <button
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => setSelectedMonth(null)}
               className="text-sm text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary-400 transition-colors"
             >
               Close Month View
-            </button>
+            </motion.button>
           </div>
 
           {/* Category Totals for this month */}
           {selectedMonthTotals && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-              <div className="bg-green-50/80 dark:bg-green-900/20 border border-green-100 dark:border-green-800 rounded-xl p-3 text-center">
-                <p className="text-[10px] font-semibold text-green-700 dark:text-green-400 uppercase">
-                  Sales
-                </p>
-                <p className="text-lg font-extrabold text-green-600 dark:text-green-400">
-                  {naira(selectedMonthTotals.sales)}
-                </p>
-              </div>
-              <div className="bg-blue-50/80 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl p-3 text-center">
-                <p className="text-[10px] font-semibold text-blue-700 dark:text-blue-400 uppercase">
-                  Staff
-                </p>
-                <p className="text-lg font-extrabold text-blue-600 dark:text-blue-400">
-                  {naira(selectedMonthTotals.staff)}
-                </p>
-              </div>
-              <div className="bg-yellow-50/80 dark:bg-yellow-900/20 border border-yellow-100 dark:border-yellow-800 rounded-xl p-3 text-center">
-                <p className="text-[10px] font-semibold text-yellow-700 dark:text-yellow-400 uppercase">
-                  Savings
-                </p>
-                <p className="text-lg font-extrabold text-yellow-600 dark:text-yellow-400">
-                  {naira(selectedMonthTotals.savings)}
-                </p>
-              </div>
-              <div className="bg-orange-50/80 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800 rounded-xl p-3 text-center">
-                <p className="text-[10px] font-semibold text-orange-700 dark:text-orange-400 uppercase">
-                  Transport
-                </p>
-                <p className="text-lg font-extrabold text-orange-600 dark:text-orange-400">
-                  {naira(selectedMonthTotals.transport)}
-                </p>
-              </div>
-              <div className="bg-purple-50/80 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 rounded-xl p-3 text-center">
-                <p className="text-[10px] font-semibold text-purple-700 dark:text-purple-400 uppercase">
-                  Utilities
-                </p>
-                <p className="text-lg font-extrabold text-purple-600 dark:text-purple-400">
-                  {naira(selectedMonthTotals.utilities)}
-                </p>
-              </div>
-              <div className="bg-pink-50/80 dark:bg-pink-900/20 border border-pink-100 dark:border-pink-800 rounded-xl p-3 text-center">
-                <p className="text-[10px] font-semibold text-pink-700 dark:text-pink-400 uppercase">
-                  Marketing
-                </p>
-                <p className="text-lg font-extrabold text-pink-600 dark:text-pink-400">
-                  {naira(selectedMonthTotals.marketing)}
-                </p>
-              </div>
-              <div className="bg-indigo-50/80 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded-xl p-3 text-center">
-                <p className="text-[10px] font-semibold text-indigo-700 dark:text-indigo-400 uppercase">
-                  Rent
-                </p>
-                <p className="text-lg font-extrabold text-indigo-600 dark:text-indigo-400">
-                  {naira(selectedMonthTotals.rent)}
-                </p>
-              </div>
-              <div className="bg-gray-50/80 dark:bg-gray-700/40 border border-gray-100 dark:border-gray-700 rounded-xl p-3 text-center">
-                <p className="text-[10px] font-semibold text-gray-700 dark:text-gray-300 uppercase">
-                  Supplies / Other
-                </p>
-                <p className="text-lg font-extrabold text-gray-600 dark:text-gray-300">
-                  {naira(
+            <motion.div
+              className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6"
+              initial="hidden"
+              animate="visible"
+              variants={{
+                hidden: { opacity: 0 },
+                visible: { opacity: 1, transition: { staggerChildren: 0.05 } },
+              }}
+            >
+              {[
+                {
+                  label: "Sales",
+                  value: naira(selectedMonthTotals.sales),
+                  color: "green",
+                },
+                {
+                  label: "Staff",
+                  value: naira(selectedMonthTotals.staff),
+                  color: "blue",
+                },
+                {
+                  label: "Savings",
+                  value: naira(selectedMonthTotals.savings),
+                  color: "yellow",
+                },
+                {
+                  label: "Transport",
+                  value: naira(selectedMonthTotals.transport),
+                  color: "orange",
+                },
+                {
+                  label: "Utilities",
+                  value: naira(selectedMonthTotals.utilities),
+                  color: "purple",
+                },
+                {
+                  label: "Marketing",
+                  value: naira(selectedMonthTotals.marketing),
+                  color: "pink",
+                },
+                {
+                  label: "Rent",
+                  value: naira(selectedMonthTotals.rent),
+                  color: "indigo",
+                },
+                {
+                  label: "Supplies/Other",
+                  value: naira(
                     selectedMonthTotals.supplies + selectedMonthTotals.other,
-                  )}
-                </p>
-              </div>
-            </div>
+                  ),
+                  color: "gray",
+                },
+              ].map((item, idx) => (
+                <motion.div
+                  key={idx}
+                  variants={{
+                    hidden: { opacity: 0, scale: 0.9 },
+                    visible: { opacity: 1, scale: 1 },
+                  }}
+                  className={`bg-${item.color}-50/80 dark:bg-${item.color}-900/20 border border-${item.color}-100 dark:border-${item.color}-800 rounded-xl p-3 text-center`}
+                >
+                  <p
+                    className={`text-[10px] font-semibold text-${item.color}-700 dark:text-${item.color}-400 uppercase`}
+                  >
+                    {item.label}
+                  </p>
+                  <p
+                    className={`text-lg font-extrabold text-${item.color}-600 dark:text-${item.color}-400`}
+                  >
+                    {item.value}
+                  </p>
+                </motion.div>
+              ))}
+            </motion.div>
           )}
 
           {filteredMonthEntries.length === 0 ? (
@@ -822,10 +891,22 @@ export default function FinanceHubPage() {
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <motion.div
+              className="space-y-3"
+              initial="hidden"
+              animate="visible"
+              variants={{
+                hidden: { opacity: 0 },
+                visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
+              }}
+            >
               {filteredMonthEntries.map((entry) => (
-                <div
+                <motion.div
                   key={entry.id}
+                  variants={{
+                    hidden: { opacity: 0, y: 10 },
+                    visible: { opacity: 1, y: 0 },
+                  }}
                   className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm hover:shadow-md transition-shadow"
                 >
                   <div className="flex-1">
@@ -875,36 +956,44 @@ export default function FinanceHubPage() {
                       {entry.type === "sale" ? "+" : "-"}
                       {naira(entry.amount)}
                     </span>
-                    <button
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                       onClick={() => setViewingEntry(entry)}
                       className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-lg transition-colors"
                     >
                       <Eye className="w-3.5 h-3.5" /> View
-                    </button>
-                    <button
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                       onClick={() => handleDeleteEntry(entry.id)}
                       className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-lg transition-colors"
                     >
                       <Trash2 className="w-3.5 h-3.5" /> Delete
-                    </button>
+                    </motion.button>
                   </div>
-                </div>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           )}
-        </div>
+        </motion.div>
       )}
 
-      {/* --- 🚀 NEW: FILTERED TRANSACTION HISTORY --- */}
+      {/* --- Filtered Transaction History --- */}
       {!selectedMonth && activeTab === "overview" && (
-        <div className="mt-6">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="mt-6"
+        >
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
             <h2 className="text-lg font-bold text-neutral-text dark:text-white flex items-center gap-2">
               <Calendar className="w-5 h-5 text-primary dark:text-primary-400" />{" "}
               Transaction History
             </h2>
 
-            {/* 🚀 FILTER CONTROLS */}
+            {/* Filter Controls */}
             <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
               <div className="relative flex-1 sm:flex-none">
                 <select
@@ -945,10 +1034,22 @@ export default function FinanceHubPage() {
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <motion.div
+              className="space-y-3"
+              initial="hidden"
+              animate="visible"
+              variants={{
+                hidden: { opacity: 0 },
+                visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
+              }}
+            >
               {filteredEntries.map((entry) => (
-                <div
+                <motion.div
                   key={entry.id}
+                  variants={{
+                    hidden: { opacity: 0, y: 10 },
+                    visible: { opacity: 1, y: 0 },
+                  }}
                   className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm hover:shadow-md transition-shadow"
                 >
                   <div className="flex-1">
@@ -998,29 +1099,37 @@ export default function FinanceHubPage() {
                       {entry.type === "sale" ? "+" : "-"}
                       {naira(entry.amount)}
                     </span>
-                    <button
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                       onClick={() => setViewingEntry(entry)}
                       className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-lg transition-colors"
                     >
                       <Eye className="w-3.5 h-3.5" /> View
-                    </button>
-                    <button
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                       onClick={() => handleDeleteEntry(entry.id)}
                       className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-lg transition-colors"
                     >
                       <Trash2 className="w-3.5 h-3.5" /> Delete
-                    </button>
+                    </motion.button>
                   </div>
-                </div>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           )}
-        </div>
+        </motion.div>
       )}
 
       {/* --- Sales Tab --- */}
       {activeTab === "sales" && (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 space-y-4">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 space-y-4"
+        >
           <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300">
             Record a Sale
           </h3>
@@ -1029,7 +1138,6 @@ export default function FinanceHubPage() {
               <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                 Date
               </label>
-              {/* 🚨 FIXED: Calendar icon INSIDE the gray bar */}
               <div className="relative w-full max-w-full sm:max-w-[200px]">
                 <div className="flex items-center w-full px-4 py-2 bg-gray-200/50 dark:bg-gray-700/50 rounded-xl hover:bg-gray-300/50 dark:hover:bg-gray-600/50 transition-colors cursor-pointer group">
                   <Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400 mr-2 flex-shrink-0" />
@@ -1092,18 +1200,30 @@ export default function FinanceHubPage() {
               />
             </div>
           </div>
-          <button
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={handleAddSale}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-primary text-white dark:text-primary-400 font-semibold rounded-xl hover:bg-primary-600 dark:hover:bg-primary-500 transition-colors"
+            disabled={isSavingSale}
+            className="w-full flex items-center justify-center gap-2 py-3 bg-primary text-white dark:text-primary-400 font-semibold rounded-xl hover:bg-primary-600 dark:hover:bg-primary-500 transition-colors disabled:opacity-70"
           >
-            <Plus className="w-5 h-5" /> Add Sale
-          </button>
-        </div>
+            {isSavingSale ? (
+              <LoadingSpinner size={20} color="text-white" />
+            ) : (
+              <Plus className="w-5 h-5" />
+            )}
+            {isSavingSale ? "Saving..." : "Add Sale"}
+          </motion.button>
+        </motion.div>
       )}
 
       {/* --- Expenses Tab --- */}
       {activeTab === "expenses" && (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 space-y-4">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 space-y-4"
+        >
           <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300">
             Record an Expense
           </h3>
@@ -1112,7 +1232,6 @@ export default function FinanceHubPage() {
               <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                 Date
               </label>
-              {/* 🚨 FIXED: Calendar icon INSIDE the gray bar */}
               <div className="relative w-full max-w-full sm:max-w-[200px]">
                 <div className="flex items-center w-full px-4 py-2 bg-gray-200/50 dark:bg-gray-700/50 rounded-xl hover:bg-gray-300/50 dark:hover:bg-gray-600/50 transition-colors cursor-pointer group">
                   <Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400 mr-2 flex-shrink-0" />
@@ -1169,18 +1288,30 @@ export default function FinanceHubPage() {
               />
             </div>
           </div>
-          <button
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={handleAddExpense}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-primary text-white dark:text-primary-400 font-semibold rounded-xl hover:bg-primary-600 dark:hover:bg-primary-500 transition-colors"
+            disabled={isSavingExpense}
+            className="w-full flex items-center justify-center gap-2 py-3 bg-primary text-white dark:text-primary-400 font-semibold rounded-xl hover:bg-primary-600 dark:hover:bg-primary-500 transition-colors disabled:opacity-70"
           >
-            <Plus className="w-5 h-5" /> Add Expense
-          </button>
-        </div>
+            {isSavingExpense ? (
+              <LoadingSpinner size={20} color="text-white" />
+            ) : (
+              <Plus className="w-5 h-5" />
+            )}
+            {isSavingExpense ? "Saving..." : "Add Expense"}
+          </motion.button>
+        </motion.div>
       )}
 
       {/* --- Staff Tab --- */}
       {activeTab === "staff" && (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 space-y-4">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 space-y-4"
+        >
           <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300">
             Record Staff Salary
           </h3>
@@ -1189,7 +1320,6 @@ export default function FinanceHubPage() {
               <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                 Date
               </label>
-              {/* 🚨 FIXED: Calendar icon INSIDE the gray bar */}
               <div className="relative w-full max-w-full sm:max-w-[200px]">
                 <div className="flex items-center w-full px-4 py-2 bg-gray-200/50 dark:bg-gray-700/50 rounded-xl hover:bg-gray-300/50 dark:hover:bg-gray-600/50 transition-colors cursor-pointer group">
                   <Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400 mr-2 flex-shrink-0" />
@@ -1228,18 +1358,30 @@ export default function FinanceHubPage() {
               />
             </div>
           </div>
-          <button
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={handleAddStaff}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-primary text-white dark:text-primary-400 font-semibold rounded-xl hover:bg-primary-600 dark:hover:bg-primary-500 transition-colors"
+            disabled={isSavingStaff}
+            className="w-full flex items-center justify-center gap-2 py-3 bg-primary text-white dark:text-primary-400 font-semibold rounded-xl hover:bg-primary-600 dark:hover:bg-primary-500 transition-colors disabled:opacity-70"
           >
-            <Plus className="w-5 h-5" /> Add Staff Salary
-          </button>
-        </div>
+            {isSavingStaff ? (
+              <LoadingSpinner size={20} color="text-white" />
+            ) : (
+              <Plus className="w-5 h-5" />
+            )}
+            {isSavingStaff ? "Saving..." : "Add Staff Salary"}
+          </motion.button>
+        </motion.div>
       )}
 
       {/* --- Savings / Investment Tab --- */}
       {activeTab === "savings" && (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 space-y-4">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 space-y-4"
+        >
           <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300">
             Record Savings or Investment
           </h3>
@@ -1248,7 +1390,6 @@ export default function FinanceHubPage() {
               <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                 Date
               </label>
-              {/* 🚨 FIXED: Calendar icon INSIDE the gray bar */}
               <div className="relative w-full max-w-full sm:max-w-[200px]">
                 <div className="flex items-center w-full px-4 py-2 bg-gray-200/50 dark:bg-gray-700/50 rounded-xl hover:bg-gray-300/50 dark:hover:bg-gray-600/50 transition-colors cursor-pointer group">
                   <Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400 mr-2 flex-shrink-0" />
@@ -1300,389 +1441,429 @@ export default function FinanceHubPage() {
               />
             </div>
           </div>
-          <button
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={handleAddSavings}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-primary text-white dark:text-primary-400 font-semibold rounded-xl hover:bg-primary-600 dark:hover:bg-primary-500 transition-colors"
+            disabled={isSavingSavings}
+            className="w-full flex items-center justify-center gap-2 py-3 bg-primary text-white dark:text-primary-400 font-semibold rounded-xl hover:bg-primary-600 dark:hover:bg-primary-500 transition-colors disabled:opacity-70"
           >
-            <Plus className="w-5 h-5" /> Add to {savingsType}
-          </button>
-        </div>
+            {isSavingSavings ? (
+              <LoadingSpinner size={20} color="text-white" />
+            ) : (
+              <Plus className="w-5 h-5" />
+            )}
+            {isSavingSavings ? "Saving..." : "Add to {savingsType}"}
+          </motion.button>
+        </motion.div>
       )}
 
       <AdSlot width={300} height={250} />
 
       {/* --- View / Edit Modal --- */}
-      {viewingEntry && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 dark:bg-black/80 p-4 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-700">
-              <h3 className="text-lg font-bold text-neutral-text dark:text-white">
-                {isEditing ? "Edit Entry" : "Business Entry Details"}
-              </h3>
-              <div className="flex items-center gap-2">
-                {!isEditing && (
-                  <button
-                    onClick={openEditMode}
-                    className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+      <AnimatePresence>
+        {viewingEntry && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 dark:bg-black/80 p-4 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: "spring", damping: 20 }}
+              className="bg-white dark:bg-gray-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700"
+            >
+              <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-700">
+                <h3 className="text-lg font-bold text-neutral-text dark:text-white">
+                  {isEditing ? "Edit Entry" : "Business Entry Details"}
+                </h3>
+                <div className="flex items-center gap-2">
+                  {!isEditing && (
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={openEditMode}
+                      className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </motion.button>
+                  )}
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => {
+                      cancelEdit();
+                      setViewingEntry(null);
+                    }}
+                    className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                   >
-                    <Pencil className="w-4 h-4" />
-                  </button>
-                )}
-                <button
-                  onClick={() => {
-                    cancelEdit();
-                    setViewingEntry(null);
-                  }}
-                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-                </button>
+                    <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                  </motion.button>
+                </div>
               </div>
-            </div>
 
-            <div className="p-5 space-y-4">
-              {isEditing ? (
-                <div className="space-y-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                        Date
-                      </label>
-                      {/* 🚨 FIXED: Calendar icon INSIDE the gray bar for modal */}
-                      <div className="relative w-full max-w-full sm:max-w-[200px]">
-                        <div className="flex items-center w-full px-4 py-2 bg-gray-200/50 dark:bg-gray-700/50 rounded-xl hover:bg-gray-300/50 dark:hover:bg-gray-600/50 transition-colors cursor-pointer group">
-                          <Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400 mr-2 flex-shrink-0" />
-                          <input
-                            type="date"
-                            value={editForm?.date || ""}
-                            onChange={(e) =>
-                              setEditForm({ ...editForm, date: e.target.value })
-                            }
-                            className="w-full bg-transparent border-none text-gray-800 dark:text-gray-200 focus:outline-none cursor-pointer text-base font-medium placeholder-gray-400"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    {editForm?.type === "sale" && (
-                      <>
-                        <div>
-                          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                            Customer
-                          </label>
-                          <input
-                            type="text"
-                            value={editForm?.customer || ""}
-                            onChange={(e) =>
-                              setEditForm({
-                                ...editForm,
-                                customer: e.target.value,
-                              })
-                            }
-                            className="mt-1 w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                            Product
-                          </label>
-                          <input
-                            type="text"
-                            value={editForm?.product || ""}
-                            onChange={(e) =>
-                              setEditForm({
-                                ...editForm,
-                                product: e.target.value,
-                              })
-                            }
-                            className="mt-1 w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                            Contact
-                          </label>
-                          <input
-                            type="text"
-                            value={editForm?.contact || ""}
-                            onChange={(e) =>
-                              setEditForm({
-                                ...editForm,
-                                contact: e.target.value,
-                              })
-                            }
-                            className="mt-1 w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
-                          />
-                        </div>
-                      </>
-                    )}
-                    {editForm?.type === "expense" && (
-                      <>
-                        <div>
-                          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                            Category
-                          </label>
-                          <select
-                            value={editForm?.category || "Supplies"}
-                            onChange={(e) =>
-                              setEditForm({
-                                ...editForm,
-                                category: e.target.value,
-                              })
-                            }
-                            className="mt-1 w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
-                          >
-                            <option>Supplies</option>
-                            <option>Transport</option>
-                            <option>Utilities</option>
-                            <option>Marketing</option>
-                            <option>Rent</option>
-                            <option>Staff</option>
-                            <option>Other</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                            Title
-                          </label>
-                          <input
-                            type="text"
-                            value={editForm?.title || ""}
-                            onChange={(e) =>
-                              setEditForm({
-                                ...editForm,
-                                title: e.target.value,
-                              })
-                            }
-                            className="mt-1 w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
-                          />
-                        </div>
-                      </>
-                    )}
-                    {editForm?.type === "staff" && (
+              <div className="p-5 space-y-4">
+                {isEditing ? (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                          Staff Name
+                          Date
+                        </label>
+                        <div className="relative w-full max-w-full sm:max-w-[200px]">
+                          <div className="flex items-center w-full px-4 py-2 bg-gray-200/50 dark:bg-gray-700/50 rounded-xl hover:bg-gray-300/50 dark:hover:bg-gray-600/50 transition-colors cursor-pointer group">
+                            <Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400 mr-2 flex-shrink-0" />
+                            <input
+                              type="date"
+                              value={editForm?.date || ""}
+                              onChange={(e) =>
+                                setEditForm({
+                                  ...editForm,
+                                  date: e.target.value,
+                                })
+                              }
+                              className="w-full bg-transparent border-none text-gray-800 dark:text-gray-200 focus:outline-none cursor-pointer text-base font-medium placeholder-gray-400"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      {editForm?.type === "sale" && (
+                        <>
+                          <div>
+                            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                              Customer
+                            </label>
+                            <input
+                              type="text"
+                              value={editForm?.customer || ""}
+                              onChange={(e) =>
+                                setEditForm({
+                                  ...editForm,
+                                  customer: e.target.value,
+                                })
+                              }
+                              className="mt-1 w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                              Product
+                            </label>
+                            <input
+                              type="text"
+                              value={editForm?.product || ""}
+                              onChange={(e) =>
+                                setEditForm({
+                                  ...editForm,
+                                  product: e.target.value,
+                                })
+                              }
+                              className="mt-1 w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                              Contact
+                            </label>
+                            <input
+                              type="text"
+                              value={editForm?.contact || ""}
+                              onChange={(e) =>
+                                setEditForm({
+                                  ...editForm,
+                                  contact: e.target.value,
+                                })
+                              }
+                              className="mt-1 w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                            />
+                          </div>
+                        </>
+                      )}
+                      {editForm?.type === "expense" && (
+                        <>
+                          <div>
+                            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                              Category
+                            </label>
+                            <select
+                              value={editForm?.category || "Supplies"}
+                              onChange={(e) =>
+                                setEditForm({
+                                  ...editForm,
+                                  category: e.target.value,
+                                })
+                              }
+                              className="mt-1 w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                            >
+                              <option>Supplies</option>
+                              <option>Transport</option>
+                              <option>Utilities</option>
+                              <option>Marketing</option>
+                              <option>Rent</option>
+                              <option>Staff</option>
+                              <option>Other</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                              Title
+                            </label>
+                            <input
+                              type="text"
+                              value={editForm?.title || ""}
+                              onChange={(e) =>
+                                setEditForm({
+                                  ...editForm,
+                                  title: e.target.value,
+                                })
+                              }
+                              className="mt-1 w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                            />
+                          </div>
+                        </>
+                      )}
+                      {editForm?.type === "staff" && (
+                        <div>
+                          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                            Staff Name
+                          </label>
+                          <input
+                            type="text"
+                            value={editForm?.staffName || ""}
+                            onChange={(e) =>
+                              setEditForm({
+                                ...editForm,
+                                staffName: e.target.value,
+                              })
+                            }
+                            className="mt-1 w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                          />
+                        </div>
+                      )}
+                      {editForm?.type === "savings" && (
+                        <>
+                          <div>
+                            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                              Type
+                            </label>
+                            <select
+                              value={editForm?.savingsType || "Savings"}
+                              onChange={(e) =>
+                                setEditForm({
+                                  ...editForm,
+                                  savingsType: e.target.value,
+                                })
+                              }
+                              className="mt-1 w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                            >
+                              <option>Savings</option>
+                              <option>Investment</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                              Title
+                            </label>
+                            <input
+                              type="text"
+                              value={editForm?.title || ""}
+                              onChange={(e) =>
+                                setEditForm({
+                                  ...editForm,
+                                  title: e.target.value,
+                                })
+                              }
+                              className="mt-1 w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                            />
+                          </div>
+                        </>
+                      )}
+                      <div
+                        className={
+                          editForm?.type === "sale" ? "col-span-2" : ""
+                        }
+                      >
+                        <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                          Amount (₦)
                         </label>
                         <input
-                          type="text"
-                          value={editForm?.staffName || ""}
+                          type="number"
+                          inputMode="numeric"
+                          value={editForm?.amount || ""}
                           onChange={(e) =>
                             setEditForm({
                               ...editForm,
-                              staffName: e.target.value,
+                              amount: parseFloat(e.target.value),
                             })
                           }
                           className="mt-1 w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
                         />
                       </div>
-                    )}
-                    {editForm?.type === "savings" && (
-                      <>
-                        <div>
-                          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                            Type
-                          </label>
-                          <select
-                            value={editForm?.savingsType || "Savings"}
-                            onChange={(e) =>
-                              setEditForm({
-                                ...editForm,
-                                savingsType: e.target.value,
-                              })
-                            }
-                            className="mt-1 w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
-                          >
-                            <option>Savings</option>
-                            <option>Investment</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                            Title
-                          </label>
-                          <input
-                            type="text"
-                            value={editForm?.title || ""}
-                            onChange={(e) =>
-                              setEditForm({
-                                ...editForm,
-                                title: e.target.value,
-                              })
-                            }
-                            className="mt-1 w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
-                          />
-                        </div>
-                      </>
-                    )}
-                    <div
-                      className={editForm?.type === "sale" ? "col-span-2" : ""}
-                    >
-                      <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                        Amount (₦)
-                      </label>
-                      <input
-                        type="number"
-                        inputMode="numeric"
-                        value={editForm?.amount || ""}
-                        onChange={(e) =>
-                          setEditForm({
-                            ...editForm,
-                            amount: parseFloat(e.target.value),
-                          })
-                        }
-                        className="mt-1 w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
-                      />
+                    </div>
+                    <div className="flex gap-2 pt-2">
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={handleSaveEdit}
+                        disabled={isSavingEdit}
+                        className="flex-1 py-2 bg-primary text-white dark:text-primary-400 font-semibold rounded-lg hover:bg-primary-600 dark:hover:bg-primary-500 transition-colors disabled:opacity-70"
+                      >
+                        {isSavingEdit ? (
+                          <LoadingSpinner size={20} color="text-white" />
+                        ) : (
+                          "Save Changes"
+                        )}
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={cancelEdit}
+                        className="flex-1 py-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
+                      >
+                        Cancel
+                      </motion.button>
                     </div>
                   </div>
-                  <div className="flex gap-2 pt-2">
-                    <button
-                      onClick={handleSaveEdit}
-                      className="flex-1 py-2 bg-primary text-white dark:text-primary-400 font-semibold rounded-lg hover:bg-primary-600 dark:hover:bg-primary-500 transition-colors"
-                    >
-                      Save Changes
-                    </button>
-                    <button
-                      onClick={cancelEdit}
-                      className="flex-1 py-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3">
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      Date
-                    </span>
-                    <span className="font-semibold text-gray-800 dark:text-gray-200">
-                      {formatDate(viewingEntry.date)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3">
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      Type
-                    </span>
-                    <span
-                      className={`font-semibold ${
-                        viewingEntry.type === "sale"
-                          ? "text-green-600 dark:text-green-400"
-                          : viewingEntry.type === "expense" ||
-                              viewingEntry.type === "staff"
-                            ? "text-red-500 dark:text-red-400"
-                            : "text-yellow-600 dark:text-yellow-400"
-                      }`}
-                    >
-                      {viewingEntry.type === "sale"
-                        ? "Sale"
-                        : viewingEntry.type === "expense"
-                          ? "Expense"
-                          : viewingEntry.type === "staff"
-                            ? "Staff"
-                            : "Savings"}
-                    </span>
-                  </div>
-                  {viewingEntry.type === "sale" && (
-                    <>
-                      <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3">
-                        <span className="text-sm text-gray-500 dark:text-gray-400">
-                          Customer
-                        </span>
-                        <span className="font-semibold text-gray-800 dark:text-gray-200">
-                          {viewingEntry.customer}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3">
-                        <span className="text-sm text-gray-500 dark:text-gray-400">
-                          Product
-                        </span>
-                        <span className="font-semibold text-gray-800 dark:text-gray-200">
-                          {viewingEntry.product}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3">
-                        <span className="text-sm text-gray-500 dark:text-gray-400">
-                          Contact
-                        </span>
-                        <span className="font-semibold text-gray-800 dark:text-gray-200">
-                          {viewingEntry.contact || "Not provided"}
-                        </span>
-                      </div>
-                    </>
-                  )}
-                  {viewingEntry.type === "expense" && (
+                ) : (
+                  <div className="space-y-4">
                     <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3">
                       <span className="text-sm text-gray-500 dark:text-gray-400">
-                        Category
+                        Date
                       </span>
                       <span className="font-semibold text-gray-800 dark:text-gray-200">
-                        {viewingEntry.category}
+                        {formatDate(viewingEntry.date)}
                       </span>
                     </div>
-                  )}
-                  {viewingEntry.type === "staff" && (
-                    <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3">
-                      <span className="text-sm text-gray-500 dark:text-gray-400">
-                        Staff Name
-                      </span>
-                      <span className="font-semibold text-gray-800 dark:text-gray-200">
-                        {viewingEntry.staffName}
-                      </span>
-                    </div>
-                  )}
-                  {viewingEntry.type === "savings" && (
                     <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3">
                       <span className="text-sm text-gray-500 dark:text-gray-400">
                         Type
                       </span>
-                      <span className="font-semibold text-gray-800 dark:text-gray-200">
-                        {viewingEntry.savingsType}
+                      <span
+                        className={`font-semibold ${
+                          viewingEntry.type === "sale"
+                            ? "text-green-600 dark:text-green-400"
+                            : viewingEntry.type === "expense" ||
+                                viewingEntry.type === "staff"
+                              ? "text-red-500 dark:text-red-400"
+                              : "text-yellow-600 dark:text-yellow-400"
+                        }`}
+                      >
+                        {viewingEntry.type === "sale"
+                          ? "Sale"
+                          : viewingEntry.type === "expense"
+                            ? "Expense"
+                            : viewingEntry.type === "staff"
+                              ? "Staff"
+                              : "Savings"}
                       </span>
                     </div>
-                  )}
-                  <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3">
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      Title
-                    </span>
-                    <span className="font-semibold text-gray-800 dark:text-gray-200">
-                      {viewingEntry.title}
-                    </span>
+                    {viewingEntry.type === "sale" && (
+                      <>
+                        <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3">
+                          <span className="text-sm text-gray-500 dark:text-gray-400">
+                            Customer
+                          </span>
+                          <span className="font-semibold text-gray-800 dark:text-gray-200">
+                            {viewingEntry.customer}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3">
+                          <span className="text-sm text-gray-500 dark:text-gray-400">
+                            Product
+                          </span>
+                          <span className="font-semibold text-gray-800 dark:text-gray-200">
+                            {viewingEntry.product}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3">
+                          <span className="text-sm text-gray-500 dark:text-gray-400">
+                            Contact
+                          </span>
+                          <span className="font-semibold text-gray-800 dark:text-gray-200">
+                            {viewingEntry.contact || "Not provided"}
+                          </span>
+                        </div>
+                      </>
+                    )}
+                    {viewingEntry.type === "expense" && (
+                      <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3">
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
+                          Category
+                        </span>
+                        <span className="font-semibold text-gray-800 dark:text-gray-200">
+                          {viewingEntry.category}
+                        </span>
+                      </div>
+                    )}
+                    {viewingEntry.type === "staff" && (
+                      <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3">
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
+                          Staff Name
+                        </span>
+                        <span className="font-semibold text-gray-800 dark:text-gray-200">
+                          {viewingEntry.staffName}
+                        </span>
+                      </div>
+                    )}
+                    {viewingEntry.type === "savings" && (
+                      <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3">
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
+                          Type
+                        </span>
+                        <span className="font-semibold text-gray-800 dark:text-gray-200">
+                          {viewingEntry.savingsType}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3">
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
+                        Title
+                      </span>
+                      <span className="font-semibold text-gray-800 dark:text-gray-200">
+                        {viewingEntry.title}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center bg-primary-50 dark:bg-primary-900/30 rounded-xl p-3">
+                      <span className="text-sm text-primary-600 dark:text-primary-400">
+                        Amount
+                      </span>
+                      <span
+                        className={`font-bold text-lg ${
+                          viewingEntry.type === "sale"
+                            ? "text-green-600 dark:text-green-400"
+                            : viewingEntry.type === "expense" ||
+                                viewingEntry.type === "staff"
+                              ? "text-red-500 dark:text-red-400"
+                              : "text-yellow-600 dark:text-yellow-400"
+                        }`}
+                      >
+                        {naira(viewingEntry.amount)}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center bg-primary-50 dark:bg-primary-900/30 rounded-xl p-3">
-                    <span className="text-sm text-primary-600 dark:text-primary-400">
-                      Amount
-                    </span>
-                    <span
-                      className={`font-bold text-lg ${
-                        viewingEntry.type === "sale"
-                          ? "text-green-600 dark:text-green-400"
-                          : viewingEntry.type === "expense" ||
-                              viewingEntry.type === "staff"
-                            ? "text-red-500 dark:text-red-400"
-                            : "text-yellow-600 dark:text-yellow-400"
-                      }`}
-                    >
-                      {naira(viewingEntry.amount)}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
 
-            <div className="p-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 text-center">
-              <button
-                onClick={() => {
-                  cancelEdit();
-                  setViewingEntry(null);
-                }}
-                className="px-6 py-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+              <div className="p-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 text-center">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    cancelEdit();
+                    setViewingEntry(null);
+                  }}
+                  className="px-6 py-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
+                >
+                  Close
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }

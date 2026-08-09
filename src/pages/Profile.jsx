@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useNaijaBase } from "../context/NaijaBaseContext";
 import { todayISO } from "../utils/constants";
+import LoadingSpinner from "../components/LoadingSpinner";
 
 export default function Profile() {
   const {
@@ -31,6 +32,10 @@ export default function Profile() {
   const [msg, setMsg] = useState(null);
   const [isEditingTheme, setIsEditingTheme] = useState(false);
   const [tempTheme, setTempTheme] = useState(currentUser?.theme || "light");
+
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
 
   if (!currentUser) return null;
 
@@ -50,7 +55,9 @@ export default function Profile() {
     ) {
       return;
     }
+    setIsDeleting(true);
     const result = await deleteAccount();
+    setIsDeleting(false);
     if (!result.ok) {
       setMsg({
         type: "error",
@@ -68,24 +75,29 @@ export default function Profile() {
   };
 
   const handleExport = () => {
-    const date = todayISO();
-    const blob = new Blob([JSON.stringify(currentUser.data, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `kuditrack_backup_${currentUser.username}_${date}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    setMsg({ type: "success", text: "Backup downloaded successfully." });
+    setIsExporting(true);
+    setTimeout(() => {
+      const date = todayISO();
+      const blob = new Blob([JSON.stringify(currentUser.data, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `kuditrack_backup_${currentUser.username}_${date}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setIsExporting(false);
+      setMsg({ type: "success", text: "Backup downloaded successfully." });
+    }, 500);
   };
 
   const handleImport = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setIsImporting(true);
     setMsg(null);
     const reader = new FileReader();
     reader.onload = async (ev) => {
@@ -104,11 +116,14 @@ export default function Profile() {
             type: "error",
             text: "Invalid file: missing required fields.",
           });
+          setIsImporting(false);
           return;
         }
         await replaceUserData(parsed);
+        setIsImporting(false);
         setMsg({ type: "success", text: "Data imported successfully." });
       } catch (err) {
+        setIsImporting(false);
         setMsg({
           type: "error",
           text: "Could not parse file. Make sure it is a valid KudiTrack backup.",
@@ -119,7 +134,6 @@ export default function Profile() {
     e.target.value = "";
   };
 
-  // Profile Picture Handler
   const handleImageUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -137,7 +151,6 @@ export default function Profile() {
     e.target.value = "";
   };
 
-  // Theme Handler
   const handleThemeSave = () => {
     updateUserData((d) => ({
       ...d,
@@ -200,9 +213,15 @@ export default function Profile() {
             </button>
             <button
               onClick={handleDelete}
-              className="flex items-center justify-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors"
+              disabled={isDeleting}
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors disabled:opacity-50"
             >
-              <Trash2 className="w-4 h-4" /> Delete
+              {isDeleting ? (
+                <LoadingSpinner size={16} color="text-red-600" />
+              ) : (
+                <Trash2 className="w-4 h-4" />
+              )}
+              {isDeleting ? "Deleting..." : "Delete"}
             </button>
           </div>
         </div>
@@ -278,15 +297,27 @@ export default function Profile() {
         <div className="flex flex-col sm:flex-row gap-3 mb-4">
           <button
             onClick={handleExport}
-            className="flex-1 flex items-center justify-center gap-2 py-3 bg-primary text-white dark:text-white font-semibold rounded-xl hover:bg-primary-600 dark:hover:bg-primary-500 transition-colors"
+            disabled={isExporting}
+            className="flex-1 flex items-center justify-center gap-2 py-3 bg-primary text-white dark:text-white font-semibold rounded-xl hover:bg-primary-600 dark:hover:bg-primary-500 transition-colors disabled:opacity-50"
           >
-            <Download className="w-5 h-5" /> Export Data
+            {isExporting ? (
+              <LoadingSpinner size={20} color="text-white" />
+            ) : (
+              <Download className="w-5 h-5" />
+            )}
+            {isExporting ? "Exporting..." : "Export Data"}
           </button>
           <button
             onClick={() => fileRef.current?.click()}
-            className="flex-1 flex items-center justify-center gap-2 py-3 bg-secondary text-white dark:text-white font-semibold rounded-xl hover:bg-secondary-600 dark:hover:bg-secondary-500 transition-colors"
+            disabled={isImporting}
+            className="flex-1 flex items-center justify-center gap-2 py-3 bg-secondary text-white dark:text-white font-semibold rounded-xl hover:bg-secondary-600 dark:hover:bg-secondary-500 transition-colors disabled:opacity-50"
           >
-            <Upload className="w-5 h-5" /> Import Data
+            {isImporting ? (
+              <LoadingSpinner size={20} color="text-white" />
+            ) : (
+              <Upload className="w-5 h-5" />
+            )}
+            {isImporting ? "Importing..." : "Import Data"}
           </button>
         </div>
         {msg && (
@@ -307,7 +338,7 @@ export default function Profile() {
         )}
       </div>
 
-      {/* --- Contact & Support (Instagram Only) --- */}
+      {/* --- Contact & Support (Instagram) --- */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
         <h3 className="text-lg font-bold text-neutral-text dark:text-white mb-4 flex items-center gap-2">
           <MessageCircle className="w-5 h-5 text-primary dark:text-primary-400" />{" "}
@@ -317,9 +348,9 @@ export default function Profile() {
           Have a question, feedback, or need help? Reach out to us on Instagram!
         </p>
 
-        {/* Instagram Direct Link */}
+        {/* Instagram Direct Link - corrected handle */}
         <a
-          href="https://www.instagram.com/kudi.track"
+          href="https://www.instagram.com/trackcash.ng"
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center justify-between p-4 bg-gradient-to-r from-pink-500 to-purple-600 rounded-xl text-white hover:opacity-90 transition-opacity"
@@ -329,7 +360,7 @@ export default function Profile() {
             <span className="font-medium">Chat with us on Instagram</span>
           </div>
           <span className="text-xs bg-white/20 px-2 py-1 rounded-full">
-            @kudi.track
+            @trackcash.ng
           </span>
         </a>
 

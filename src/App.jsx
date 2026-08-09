@@ -1,4 +1,5 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import { Instagram, Twitter } from "lucide-react";
 import Navbar from "./components/Navbar";
 import BottomNav from "./components/BottomNav";
@@ -18,6 +19,25 @@ import AdminBlogManager from "./pages/AdminBlogManager";
 import BlogIndex from "./pages/BlogIndex";
 import BlogDetail from "./pages/BlogDetail";
 import { useState, useEffect } from "react";
+
+// Page transition wrapper
+const pageVariants = {
+  initial: { opacity: 0, y: 10 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -10 },
+};
+
+const PageWrapper = ({ children }) => (
+  <motion.div
+    variants={pageVariants}
+    initial="initial"
+    animate="animate"
+    exit="exit"
+    transition={{ duration: 0.25 }}
+  >
+    {children}
+  </motion.div>
+);
 
 function ErrorBoundary({ children }) {
   const [hasError, setHasError] = useState(false);
@@ -69,6 +89,8 @@ function ThemeManager() {
 }
 
 export default function App() {
+  const location = useLocation();
+
   return (
     <ErrorBoundary>
       <NaijaBaseProvider>
@@ -79,76 +101,122 @@ export default function App() {
 
           <main className="flex-1 overflow-y-auto pt-safe pb-[calc(env(safe-area-inset-bottom)+90px)] w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 scroll-smooth">
             <div className="min-h-full pb-0">
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route
-                  path="/"
-                  element={
-                    <ProtectedRoute>
-                      <Dashboard />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/profile"
-                  element={
-                    <ProtectedRoute>
-                      <Profile />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/market"
-                  element={
-                    <ProtectedRoute>
-                      <MarketPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/finance"
-                  element={
-                    <ProtectedRoute>
-                      <FinanceHubPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/trip"
-                  element={
-                    <ProtectedRoute>
-                      <TripPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/savings"
-                  element={
-                    <ProtectedRoute>
-                      <SavingsPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/admin"
-                  element={
-                    <ProtectedRoute>
-                      <AdminPanel />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/admin/blog"
-                  element={
-                    <ProtectedRoute>
-                      <AdminBlogManager />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route path="/blog" element={<BlogIndex />} />
-                <Route path="/blog/:slug" element={<BlogDetail />} />
-              </Routes>
+              <AnimatePresence mode="wait">
+                <Routes location={location} key={location.pathname}>
+                  <Route
+                    path="/login"
+                    element={
+                      <PageWrapper>
+                        <Login />
+                      </PageWrapper>
+                    }
+                  />
+                  <Route
+                    path="/register"
+                    element={
+                      <PageWrapper>
+                        <Register />
+                      </PageWrapper>
+                    }
+                  />
+                  <Route
+                    path="/"
+                    element={
+                      <ProtectedRoute>
+                        <PageWrapper>
+                          <Dashboard />
+                        </PageWrapper>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/profile"
+                    element={
+                      <ProtectedRoute>
+                        <PageWrapper>
+                          <Profile />
+                        </PageWrapper>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/market"
+                    element={
+                      <ProtectedRoute>
+                        <PageWrapper>
+                          <MarketPage />
+                        </PageWrapper>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/finance"
+                    element={
+                      <ProtectedRoute>
+                        <PageWrapper>
+                          <FinanceHubPage />
+                        </PageWrapper>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/trip"
+                    element={
+                      <ProtectedRoute>
+                        <PageWrapper>
+                          <TripPage />
+                        </PageWrapper>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/savings"
+                    element={
+                      <ProtectedRoute>
+                        <PageWrapper>
+                          <SavingsPage />
+                        </PageWrapper>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin"
+                    element={
+                      <ProtectedRoute>
+                        <PageWrapper>
+                          <AdminPanel />
+                        </PageWrapper>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/blog"
+                    element={
+                      <ProtectedRoute>
+                        <PageWrapper>
+                          <AdminBlogManager />
+                        </PageWrapper>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/blog"
+                    element={
+                      <PageWrapper>
+                        <BlogIndex />
+                      </PageWrapper>
+                    }
+                  />
+                  <Route
+                    path="/blog/:slug"
+                    element={
+                      <PageWrapper>
+                        <BlogDetail />
+                      </PageWrapper>
+                    }
+                  />
+                </Routes>
+              </AnimatePresence>
             </div>
           </main>
 
@@ -164,7 +232,6 @@ export default function App() {
             <BottomNav />
           </div>
 
-          {/* Footer for Desktop only */}
           <footer className="hidden md:block bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 py-6 mt-auto transition-colors duration-300">
             <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
               <p className="text-sm text-gray-500 dark:text-gray-400 break-words">
@@ -175,7 +242,6 @@ export default function App() {
                 . All rights reserved.
               </p>
               <div className="flex items-center gap-5">
-                {/* 🚨 UPDATED INSTAGRAM HANDLE */}
                 <a
                   href="https://www.instagram.com/trackcash.ng"
                   target="_blank"
@@ -184,7 +250,6 @@ export default function App() {
                 >
                   <Instagram className="w-5 h-5" />
                 </a>
-                {/* 🚨 UPDATED TWITTER/X HANDLE */}
                 <a
                   href="https://x.com/trackcash.ng"
                   target="_blank"
