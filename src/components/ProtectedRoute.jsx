@@ -17,9 +17,7 @@ export default function ProtectedRoute({ children }) {
     return <Navigate to="/login" replace />;
   }
 
-  // If it's a password recovery session, DO NOT redirect to home.
-  // The user should stay on the reset page (but this component is only used for protected routes,
-  // so this condition is a safety net).
+  // If it's a password recovery session, allow access (though this route shouldn't be used during recovery)
   if (isPasswordRecovery) {
     return children;
   }

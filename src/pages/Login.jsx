@@ -1,226 +1,297 @@
-import { useState } from "react";
-import { Link, useNavigate, Navigate } from "react-router-dom";
-import { Mail, Lock, LogIn, Eye, EyeOff } from "lucide-react";
-import { useNaijaBase } from "../context/NaijaBaseContext";
-import LoadingSpinner from "../components/LoadingSpinner";
+import { Routes, Route, useLocation, Navigate } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
+import { Instagram, Twitter } from "lucide-react";
+import Navbar from "./components/Navbar";
+import BottomNav from "./components/BottomNav";
+import AdSlot from "./components/AdSlot";
+import ProtectedRoute from "./components/ProtectedRoute";
+import { NaijaBaseProvider, useNaijaBase } from "./context/NaijaBaseContext";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import Profile from "./pages/Profile";
+import Dashboard from "./pages/Dashboard";
+import MarketPage from "./pages/MarketPage";
+import FinanceHubPage from "./pages/FinanceHubPage";
+import TripPage from "./pages/TripPage";
+import SavingsPage from "./pages/SavingsPage";
+import AdminPanel from "./pages/AdminPanel";
+import AdminBlogManager from "./pages/AdminBlogManager";
+import BlogIndex from "./pages/BlogIndex";
+import BlogDetail from "./pages/BlogDetail";
+import ResetPassword from "./pages/ResetPassword";
+import { useState, useEffect } from "react";
 
-export default function Login() {
-  const { state, login, resetPassword, resendConfirmation } = useNaijaBase();
-  const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
+const pageVariants = {
+  initial: { opacity: 0, y: 10 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -10 },
+};
 
-  const [showReset, setShowReset] = useState(false);
-  const [resetEmail, setResetEmail] = useState("");
-  const [resetMsg, setResetMsg] = useState(null);
+const PageWrapper = ({ children }) => (
+  <motion.div
+    variants={pageVariants}
+    initial="initial"
+    animate="animate"
+    exit="exit"
+    transition={{ duration: 0.25 }}
+  >
+    {children}
+  </motion.div>
+);
 
-  if (state.currentUserId != null) return <Navigate to="/" replace />;
+function ErrorBoundary({ children }) {
+  const [hasError, setHasError] = useState(false);
+  useEffect(() => {
+    const handler = (event) => {
+      console.error("Global Error:", event.error);
+      setHasError(true);
+    };
+    window.addEventListener("error", handler);
+    return () => window.removeEventListener("error", handler);
+  }, []);
+  if (hasError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-8 bg-red-50 dark:bg-red-900 text-center">
+        <h1 className="text-2xl font-bold text-red-600 dark:text-red-300 mb-2">
+          Something went wrong.
+        </h1>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 bg-red-600 text-white rounded"
+        >
+          Reload Page
+        </button>
+      </div>
+    );
+  }
+  return children;
+}
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setError("");
-    setSuccessMessage("");
-    setLoading(true);
-    const res = await login(email.trim(), password);
-    setLoading(false);
-    if (!res.ok) {
-      setError(res.error);
-      return;
-    }
-    navigate("/");
-  };
-
-  const handleResetRequest = async (e) => {
-    e.preventDefault();
-    setError("");
-    setResetMsg(null);
-    if (!resetEmail.trim()) {
-      setError("Please enter your email address.");
-      return;
-    }
-    const res = await resetPassword(resetEmail.trim());
-    if (res.ok) {
-      setResetMsg(res.message || "Password reset link sent! Check your inbox.");
-      setResetEmail("");
+function ThemeManager() {
+  const { currentUser } = useNaijaBase();
+  useEffect(() => {
+    const theme = currentUser?.theme || "light";
+    if (theme === "dark") {
+      document.documentElement.classList.add("dark");
     } else {
-      setError(res.error);
+      document.documentElement.classList.remove("dark");
     }
-  };
+  }, [currentUser?.theme]);
+  return null;
+}
+
+// 🛡️ Prevent logged-in users (non-recovery) from accessing auth pages
+function AuthGuard({ children }) {
+  const { state, isPasswordRecovery } = useNaijaBase();
+  const location = useLocation();
+
+  if (state.currentUserId != null && !isPasswordRecovery) {
+    // Only redirect if trying to access login/register
+    if (location.pathname === "/login" || location.pathname === "/register") {
+      return <Navigate to="/" replace />;
+    }
+  }
+
+  return children;
+}
+
+export default function App() {
+  const location = useLocation();
 
   return (
-    <div className="max-w-md mx-auto px-4 py-8 animate-fade-in">
-      <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-3xl shadow-2xl border border-white/20 dark:border-gray-700/50 p-6 transition-colors duration-300">
-        <div className="flex flex-col items-center mb-4">
-          <img
-            src="/trackcash-logo.png"
-            alt="TrackCash"
-            className="w-16 h-16 object-contain mb-2 drop-shadow-lg"
-          />
-          <h1 className="text-2xl font-extrabold text-neutral-text dark:text-white tracking-tight text-center">
-            Welcome back
-          </h1>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-center max-w-xs mx-auto">
-            Log in to update your daily records and monitor your cash flow in
-            real time.
-          </p>
-        </div>
+    <ErrorBoundary>
+      <NaijaBaseProvider>
+        <ThemeManager />
 
-        {/* Warm, premium Information Card */}
-        <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl p-3 mb-4 border border-amber-200 dark:border-amber-800 shadow-sm">
-          <p className="text-xs text-amber-800 dark:text-amber-200 leading-relaxed text-center font-medium">
-            {showReset
-              ? "We'll send a secure link to reset your password."
-              : "Start logging your daily expenses, business income, trips, and savings."}
-          </p>
-        </div>
+        <div className="h-screen overflow-hidden bg-[#F8F9FA] dark:bg-[#111827] flex flex-col transition-colors duration-300">
+          <Navbar />
 
-        {successMessage && (
-          <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 text-sm rounded-xl p-3 mb-4">
-            {successMessage}
+          <main className="flex-1 overflow-y-auto pt-safe pb-[calc(env(safe-area-inset-bottom)+90px)] w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 scroll-smooth">
+            <div className="min-h-full pb-0">
+              <AnimatePresence mode="wait">
+                <Routes location={location} key={location.pathname}>
+                  {/* PUBLIC ROUTES */}
+                  <Route
+                    path="/login"
+                    element={
+                      <PageWrapper>
+                        <AuthGuard>
+                          <Login />
+                        </AuthGuard>
+                      </PageWrapper>
+                    }
+                  />
+                  <Route
+                    path="/register"
+                    element={
+                      <PageWrapper>
+                        <AuthGuard>
+                          <Register />
+                        </AuthGuard>
+                      </PageWrapper>
+                    }
+                  />
+                  {/* 🟢 RESET PASSWORD - UNGATED */}
+                  <Route
+                    path="/reset-password"
+                    element={
+                      <PageWrapper>
+                        <ResetPassword />
+                      </PageWrapper>
+                    }
+                  />
+
+                  {/* PROTECTED ROUTES */}
+                  <Route
+                    path="/"
+                    element={
+                      <ProtectedRoute>
+                        <PageWrapper>
+                          <Dashboard />
+                        </PageWrapper>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/profile"
+                    element={
+                      <ProtectedRoute>
+                        <PageWrapper>
+                          <Profile />
+                        </PageWrapper>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/market"
+                    element={
+                      <ProtectedRoute>
+                        <PageWrapper>
+                          <MarketPage />
+                        </PageWrapper>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/finance"
+                    element={
+                      <ProtectedRoute>
+                        <PageWrapper>
+                          <FinanceHubPage />
+                        </PageWrapper>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/trip"
+                    element={
+                      <ProtectedRoute>
+                        <PageWrapper>
+                          <TripPage />
+                        </PageWrapper>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/savings"
+                    element={
+                      <ProtectedRoute>
+                        <PageWrapper>
+                          <SavingsPage />
+                        </PageWrapper>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin"
+                    element={
+                      <ProtectedRoute>
+                        <PageWrapper>
+                          <AdminPanel />
+                        </PageWrapper>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/blog"
+                    element={
+                      <ProtectedRoute>
+                        <PageWrapper>
+                          <AdminBlogManager />
+                        </PageWrapper>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/blog"
+                    element={
+                      <PageWrapper>
+                        <BlogIndex />
+                      </PageWrapper>
+                    }
+                  />
+                  <Route
+                    path="/blog/:slug"
+                    element={
+                      <PageWrapper>
+                        <BlogDetail />
+                      </PageWrapper>
+                    }
+                  />
+                </Routes>
+              </AnimatePresence>
+            </div>
+          </main>
+
+          <div className="flex flex-col items-center justify-end w-full z-30 bg-[#F8F9FA] dark:bg-[#111827] flex-shrink-0">
+            <div className="w-full max-w-[360px] pb-1 px-2 sm:hidden">
+              <AdSlot
+                width={320}
+                height={50}
+                label="Ad Space"
+                className="!py-1 w-full"
+              />
+            </div>
+            <BottomNav />
           </div>
-        )}
 
-        {!showReset ? (
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="relative group">
-              <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-0.5 block">
-                Email Address
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 transition-all placeholder:text-gray-400 text-sm"
-                  placeholder="you@example.com"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="relative group">
-              <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-0.5 block">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-10 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 transition-all placeholder:text-gray-400 text-sm"
-                  placeholder="Enter your password"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                >
-                  {showPassword ? (
-                    <EyeOff className="w-4 h-4" />
-                  ) : (
-                    <Eye className="w-4 h-4" />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {error && (
-              <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-sm rounded-xl p-3">
-                {error}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 bg-primary text-white dark:text-white font-semibold rounded-xl hover:bg-primary-600 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 text-sm"
-            >
-              {loading ? (
-                <LoadingSpinner size={20} color="text-white" />
-              ) : (
-                <>
-                  <LogIn className="w-4 h-4" /> Log In
-                </>
-              )}
-            </button>
-
-            <div className="flex flex-col items-center gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowReset(true)}
-                className="text-xs text-gray-500 hover:text-primary transition-colors"
-              >
-                Forgot password?
-              </button>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                No account?{" "}
-                <Link
-                  to="/register"
-                  className="text-primary font-semibold hover:underline"
-                >
-                  Create one
-                </Link>
+          <footer className="hidden md:block bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 py-6 mt-auto transition-colors duration-300">
+            <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                © {new Date().getFullYear()}{" "}
+                <span className="font-semibold text-primary dark:text-primary-400">
+                  TrackCash
+                </span>
+                . All rights reserved.
               </p>
-            </div>
-          </form>
-        ) : (
-          <form onSubmit={handleResetRequest} className="space-y-4">
-            <div className="relative group">
-              <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-0.5 block">
-                Email Address
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="email"
-                  value={resetEmail}
-                  onChange={(e) => setResetEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 transition-all placeholder:text-gray-400 text-sm"
-                  placeholder="you@example.com"
-                  required
-                />
+              <div className="flex items-center gap-5">
+                <a
+                  href="https://www.instagram.com/trackcash.ng"
+                  target="_blank"
+                  rel="noopener"
+                  className="text-gray-400 hover:text-primary"
+                >
+                  <Instagram className="w-5 h-5" />
+                </a>
+                <a
+                  href="https://x.com/trackcash.ng"
+                  target="_blank"
+                  rel="noopener"
+                  className="text-gray-400 hover:text-primary"
+                >
+                  <Twitter className="w-5 h-5" />
+                </a>
+                <a
+                  href="https://trackcash.online"
+                  className="text-sm font-medium text-primary hover:underline"
+                >
+                  Visit App
+                </a>
               </div>
             </div>
-
-            {error && (
-              <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-sm rounded-xl p-3">
-                {error}
-              </div>
-            )}
-            {resetMsg && (
-              <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 text-sm rounded-xl p-3">
-                {resetMsg}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              className="w-full py-3 bg-primary text-white dark:text-white font-semibold rounded-xl hover:bg-primary-600 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 text-sm"
-            >
-              Send Reset Link
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setShowReset(false);
-                setError("");
-                setResetMsg(null);
-              }}
-              className="w-full text-center text-xs text-gray-500 hover:text-primary transition-colors mt-2"
-            >
-              ← Back to Login
-            </button>
-          </form>
-        )}
-      </div>
-    </div>
+          </footer>
+        </div>
+      </NaijaBaseProvider>
+    </ErrorBoundary>
   );
 }

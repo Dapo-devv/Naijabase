@@ -80,20 +80,20 @@ function ThemeManager() {
   return null;
 }
 
+// 🛡️ Global guard: prevents any logged-in user from accessing auth pages
+// except during password recovery.
 function AuthGuard({ children }) {
   const { state, isPasswordRecovery } = useNaijaBase();
   const location = useLocation();
 
-  // If user is logged in and not in recovery, redirect away from auth pages
+  // If logged in and NOT in recovery, redirect to home (except for /reset-password, which we've already excluded)
   if (state.currentUserId != null && !isPasswordRecovery) {
-    // Allow access to /reset-password only if in recovery mode (already handled)
-    if (location.pathname === "/reset-password") {
-      return children;
+    // Only redirect if trying to access login/register (but not reset-password)
+    if (location.pathname === "/login" || location.pathname === "/register") {
+      return <Navigate to="/" replace />;
     }
-    return <Navigate to="/" replace />;
   }
 
-  // If not logged in, allow access to public pages
   return children;
 }
 
@@ -112,39 +112,38 @@ export default function App() {
             <div className="min-h-full pb-0">
               <AnimatePresence mode="wait">
                 <Routes location={location} key={location.pathname}>
-                  {/* Public routes with AuthGuard */}
+                  {/* 🟢 PUBLIC ROUTES - NO PROTECTED WRAPPER */}
                   <Route
                     path="/login"
                     element={
-                      <AuthGuard>
-                        <PageWrapper>
+                      <PageWrapper>
+                        <AuthGuard>
                           <Login />
-                        </PageWrapper>
-                      </AuthGuard>
+                        </AuthGuard>
+                      </PageWrapper>
                     }
                   />
                   <Route
                     path="/register"
                     element={
-                      <AuthGuard>
-                        <PageWrapper>
+                      <PageWrapper>
+                        <AuthGuard>
                           <Register />
-                        </PageWrapper>
-                      </AuthGuard>
+                        </AuthGuard>
+                      </PageWrapper>
                     }
                   />
+                  {/* 🟢 RESET PASSWORD - UNGATED */}
                   <Route
                     path="/reset-password"
                     element={
-                      <AuthGuard>
-                        <PageWrapper>
-                          <ResetPassword />
-                        </PageWrapper>
-                      </AuthGuard>
+                      <PageWrapper>
+                        <ResetPassword />
+                      </PageWrapper>
                     }
                   />
 
-                  {/* Protected routes (require login) */}
+                  {/* 🔒 PROTECTED ROUTES (require login) */}
                   <Route
                     path="/"
                     element={
