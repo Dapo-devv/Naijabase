@@ -3,9 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { Lock, CheckCircle2, XCircle } from "lucide-react";
 import LoadingSpinner from "../components/LoadingSpinner";
+import { useNaijaBase } from "../context/NaijaBaseContext";
 
 export default function ResetPassword() {
   const navigate = useNavigate();
+  const { currentUser } = useNaijaBase(); // Check if user is already logged in
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -15,14 +17,20 @@ export default function ResetPassword() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    // Check if we have the recovery token in the URL
+    // 1. Check if we have a recovery token in the URL hash
     const hash = window.location.hash;
-    const params = new URLSearchParams(hash.replace("#", "?"));
-    const type = params.get("type");
-    const accessToken = params.get("access_token");
+    let hasValidRecoveryHash = false;
+    if (hash) {
+      const params = new URLSearchParams(hash.replace("#", "?"));
+      const type = params.get("type");
+      const accessToken = params.get("access_token");
+      if (type === "recovery" && accessToken) {
+        hasValidRecoveryHash = true;
+      }
+    }
 
-    if (type === "recovery" && accessToken) {
-      // We have a valid token, set the session so we can update the password
+    // 2. If hash is present and valid, verify the session
+    if (hasValidRecoveryHash) {
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session) {
           setIsTokenValid(true);
@@ -32,12 +40,17 @@ export default function ResetPassword() {
         setIsCheckingToken(false);
       });
     } else {
-      setError(
-        "Missing reset token. Please request a new password reset link.",
-      );
-      setIsCheckingToken(false);
+      // 3. If NO hash, but the user is ALREADY logged in (e.g., redirect lost the hash),
+      // we still show the form so they can reset their password.
+      if (currentUser) {
+        setIsTokenValid(true);
+        setIsCheckingToken(false);
+      } else {
+        setError("Invalid reset link. Please request a new password reset.");
+        setIsCheckingToken(false);
+      }
     }
-  }, []);
+  }, [currentUser]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

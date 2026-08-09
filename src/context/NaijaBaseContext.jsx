@@ -14,15 +14,11 @@ const NaijaBaseContext = createContext(null);
 function getSignupErrorMessage(authError) {
   const raw =
     typeof authError?.message === "string" ? authError.message.trim() : "";
-
-  if (raw.toLowerCase().includes("already registered")) {
+  if (raw.toLowerCase().includes("already registered"))
     return "This email is already registered. Please log in instead.";
-  }
-
-  const looksUsable = raw.length > 0 && raw !== "{}" && !raw.startsWith("{");
-  return looksUsable
+  return raw.length > 0 && raw !== "{}" && !raw.startsWith("{")
     ? raw
-    : "We couldn't create your account just now. Please try again in a moment.";
+    : "We couldn't create your account. Please try again.";
 }
 
 export function NaijaBaseProvider({ children }) {
@@ -33,30 +29,21 @@ export function NaijaBaseProvider({ children }) {
 
   const fetchUserData = useCallback(async (userId) => {
     if (!userId) return;
-
     try {
       const { data, error } = await supabase
         .from("user_data")
         .select("data")
         .eq("id", userId)
         .single();
-
       if (error) {
         if (error.code === "PGRST116") {
-          console.log("⚠️ No data row found for user. Creating one now...");
+          console.log("⚠️ Creating new data row...");
           const freshData = getFreshUserData();
-          const { error: insertError } = await supabase
+          await supabase
             .from("user_data")
             .insert({ id: userId, data: freshData });
-
-          if (insertError) {
-            console.error("❌ Failed to create user data row:", insertError);
-          } else {
-            console.log("✅ Data row created successfully!");
-            setUserData(freshData);
-          }
+          setUserData(freshData);
         } else if (error.status === 401) {
-          console.error("❌ Supabase session expired. Logging out...");
           await supabase.auth.signOut();
           setUser(null);
           setUserData(null);
@@ -66,31 +53,21 @@ export function NaijaBaseProvider({ children }) {
         }
         return;
       }
-
-      if (data) {
-        console.log("✅ Loaded user data:", data.data);
-        setUserData(data.data);
-      }
+      if (data) setUserData(data.data);
     } catch (err) {
-      console.error("❌ Unexpected error in fetchUserData:", err);
+      console.error("❌ Unexpected error:", err);
     }
   }, []);
 
   useEffect(() => {
     let isMounted = true;
-
-    const fetchSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+    supabase.auth.getSession().then(({ data: { session } }) => {
       if (isMounted && session?.user) {
         setUser(session.user);
-        await fetchUserData(session.user.id);
+        fetchUserData(session.user.id);
       }
       if (isMounted) setLoading(false);
-    };
-    fetchSession();
-
+    });
     const { data: listener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (isMounted) {
@@ -105,7 +82,6 @@ export function NaijaBaseProvider({ children }) {
         }
       },
     );
-
     return () => {
       isMounted = false;
       listener?.subscription?.unsubscribe();
@@ -122,37 +98,23 @@ export function NaijaBaseProvider({ children }) {
           emailRedirectTo: `${window.location.origin}/login`,
         },
       });
-
-      if (authError) {
+      if (authError)
         return { ok: false, error: getSignupErrorMessage(authError) };
-      }
-
-      if (authData?.user?.identities?.length === 0) {
-        return {
-          ok: false,
-          error: "This email is already registered. Please log in instead.",
-        };
-      }
-
+      if (authData?.user?.identities?.length === 0)
+        return { ok: false, error: "Email already registered." };
       if (authData?.user && !authData.user.confirmed_at) {
         setEmailConfirmationSent(true);
         return {
           ok: true,
           message:
-            "Registration successful! Please check your email to confirm your account.",
+            "Registration successful! Please check your email to confirm.",
         };
       }
-
-      if (!authData.user) {
-        return {
-          ok: false,
-          error: "Account creation failed. Please try again.",
-        };
-      }
-
+      if (!authData.user)
+        return { ok: false, error: "Account creation failed." };
       setUser(authData.user);
       await fetchUserData(authData.user.id);
-      return { ok: true, message: "Account created successfully!" };
+      return { ok: true, message: "Account created!" };
     },
     [fetchUserData],
   );
@@ -162,81 +124,48 @@ export function NaijaBaseProvider({ children }) {
       email,
       password,
     });
-
     if (error) {
-      if (error.message.includes("Email not confirmed")) {
-        return {
-          ok: false,
-          error:
-            "Please confirm your email before logging in. Check your inbox for the confirmation link.",
-        };
-      }
-      if (error.message.includes("Invalid login credentials")) {
-        return {
-          ok: false,
-          error: "Invalid email or password. Please try again.",
-        };
-      }
+      if (error.message.includes("Email not confirmed"))
+        return { ok: false, error: "Please confirm your email first." };
+      if (error.message.includes("Invalid login credentials"))
+        return { ok: false, error: "Invalid email or password." };
       return { ok: false, error: error.message };
     }
-
     return { ok: true };
   }, []);
 
   const resendConfirmation = useCallback(async (email) => {
     const { error } = await supabase.auth.resend({
       type: "signup",
-      email: email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/login`,
-      },
+      email,
+      options: { emailRedirectTo: `${window.location.origin}/login` },
     });
-
-    if (error) {
-      return { ok: false, error: error.message };
-    }
-    return {
-      ok: true,
-      message: "Confirmation email resent! Please check your inbox.",
-    };
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, message: "Confirmation email resent!" };
   }, []);
 
   const logout = useCallback(async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error("❌ Error during logout:", error);
-    }
+    await supabase.auth.signOut();
     setUser(null);
     setUserData(null);
   }, []);
 
-  // --- 🚀 UPDATED: Redirect to /reset-password instead of /login ---
   const resetPassword = useCallback(async (email) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`, // <--- CHANGED
+      redirectTo: `${window.location.origin}/reset-password`,
     });
     if (error) {
-      if (error.message.includes("rate limit")) {
-        return {
-          ok: false,
-          error:
-            "Too many reset attempts. Please wait a few minutes and try again.",
-        };
-      }
-      if (error.message.includes("Email not found")) {
-        return {
-          ok: false,
-          error: "No account found with this email address.",
-        };
-      }
+      if (error.message.includes("rate limit"))
+        return { ok: false, error: "Too many attempts. Wait a few minutes." };
+      if (error.message.includes("Email not found"))
+        return { ok: false, error: "No account found with this email." };
       return { ok: false, error: error.message };
     }
-    return { ok: true, message: "Password reset link sent! Check your inbox." };
+    return { ok: true, message: "Password reset link sent!" };
   }, []);
 
   const deleteAccount = useCallback(async () => {
     if (!user) return { ok: false, error: "No user logged in." };
-
     try {
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-user`,
@@ -249,32 +178,22 @@ export function NaijaBaseProvider({ children }) {
           body: JSON.stringify({ userId: user.id }),
         },
       );
-
       const result = await response.json();
-
-      if (!response.ok) {
+      if (!response.ok)
         throw new Error(result.error || "Failed to delete account");
-      }
-
       setUser(null);
       setUserData(null);
-
-      return { ok: true, message: "Account deleted successfully." };
+      return { ok: true, message: "Account deleted." };
     } catch (err) {
-      console.error("❌ Unexpected error during account deletion:", err);
-      return {
-        ok: false,
-        error: err.message || "An unexpected error occurred.",
-      };
+      return { ok: false, error: err.message };
     }
   }, [user]);
 
   const updateUserData = useCallback(
     async (updater) => {
       if (!user) return;
-      setUserData((prevData) => {
-        const newData =
-          typeof updater === "function" ? updater(prevData) : updater;
+      setUserData((prev) => {
+        const newData = typeof updater === "function" ? updater(prev) : updater;
         supabase
           .from("user_data")
           .update({ data: newData, updated_at: new Date() })
@@ -296,10 +215,7 @@ export function NaijaBaseProvider({ children }) {
         .from("user_data")
         .update({ data: newData, updated_at: new Date() })
         .eq("id", user.id);
-
-      if (error) {
-        console.error("❌ Failed to replace user data:", error);
-      }
+      if (error) console.error("❌ Failed to replace user data:", error);
     },
     [user],
   );
@@ -357,8 +273,7 @@ export function NaijaBaseProvider({ children }) {
 
 export function useNaijaBase() {
   const ctx = useContext(NaijaBaseContext);
-  if (!ctx) {
+  if (!ctx)
     throw new Error("useNaijaBase must be used within NaijaBaseProvider");
-  }
   return ctx;
 }

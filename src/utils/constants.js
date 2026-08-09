@@ -16,18 +16,12 @@ export function todayISO() {
 
 export function formatDate(iso) {
   if (!iso) return "";
-
-  // 🚀 FIX: Handle different date formats
   let date;
-
-  // If it's a full ISO string with time, parse it properly
   if (iso.includes("T")) {
     date = new Date(iso);
   } else {
-    // If it's just a date string, treat it as UTC
     const parts = iso.split("-");
     if (parts.length === 3) {
-      // Create date in local timezone but interpret as UTC
       date = new Date(
         Date.UTC(
           parseInt(parts[0]),
@@ -39,12 +33,9 @@ export function formatDate(iso) {
       date = new Date(iso);
     }
   }
-
-  // Check if date is valid
   if (isNaN(date.getTime())) {
     return "Invalid date";
   }
-
   return date.toLocaleDateString("en-NG", {
     day: "numeric",
     month: "short",
@@ -64,8 +55,12 @@ export function getFreshUserData() {
     username: "",
     name: "",
     surname: "",
-    profilePicture: "", // 🚀 Store Base64 image
-    theme: "light", // 🚀 Store user theme preference
+    email: "",
+    phoneNumber: "", // New field
+    timezone: "Africa/Lagos", // New field
+    profilePicture: "",
+    theme: "light", // Default theme
+    loginAlerts: true, // New security setting
     marketItems: ["Rice", "Beans", "Garri", "Tomatoes", "Oil"],
     marketLogs: [],
     generator: {
