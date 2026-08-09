@@ -11,7 +11,6 @@ import { getFreshUserData } from "../utils/constants";
 
 const NaijaBaseContext = createContext(null);
 
-// --- Turn a Supabase signup error into something safe to show a user ---
 function getSignupErrorMessage(authError) {
   const raw =
     typeof authError?.message === "string" ? authError.message.trim() : "";
@@ -32,7 +31,6 @@ export function NaijaBaseProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [emailConfirmationSent, setEmailConfirmationSent] = useState(false);
 
-  // --- Fetch user data from Supabase ---
   const fetchUserData = useCallback(async (userId) => {
     if (!userId) return;
 
@@ -44,7 +42,6 @@ export function NaijaBaseProvider({ children }) {
         .single();
 
       if (error) {
-        // If no row exists, create a fresh one for the user
         if (error.code === "PGRST116") {
           console.log("⚠️ No data row found for user. Creating one now...");
           const freshData = getFreshUserData();
@@ -79,7 +76,6 @@ export function NaijaBaseProvider({ children }) {
     }
   }, []);
 
-  // --- Auth State Listener ---
   useEffect(() => {
     let isMounted = true;
 
@@ -116,7 +112,6 @@ export function NaijaBaseProvider({ children }) {
     };
   }, [fetchUserData]);
 
-  // --- Register (Sign Up) ---
   const register = useCallback(
     async (email, password, username, name, surname) => {
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -124,7 +119,7 @@ export function NaijaBaseProvider({ children }) {
         password,
         options: {
           data: { username, name, surname },
-          emailRedirectTo: `${window.location.origin}/login`, // 🚀 FIX: use current domain
+          emailRedirectTo: `${window.location.origin}/login`,
         },
       });
 
@@ -132,7 +127,6 @@ export function NaijaBaseProvider({ children }) {
         return { ok: false, error: getSignupErrorMessage(authError) };
       }
 
-      // Check if user already exists (identities array empty means duplicate)
       if (authData?.user?.identities?.length === 0) {
         return {
           ok: false,
@@ -140,7 +134,6 @@ export function NaijaBaseProvider({ children }) {
         };
       }
 
-      // If email confirmation is required
       if (authData?.user && !authData.user.confirmed_at) {
         setEmailConfirmationSent(true);
         return {
@@ -164,7 +157,6 @@ export function NaijaBaseProvider({ children }) {
     [fetchUserData],
   );
 
-  // --- Login ---
   const login = useCallback(async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -191,13 +183,12 @@ export function NaijaBaseProvider({ children }) {
     return { ok: true };
   }, []);
 
-  // --- Resend Confirmation Email ---
   const resendConfirmation = useCallback(async (email) => {
     const { error } = await supabase.auth.resend({
       type: "signup",
       email: email,
       options: {
-        emailRedirectTo: `${window.location.origin}/login`, // 🚀 FIX: use current domain
+        emailRedirectTo: `${window.location.origin}/login`,
       },
     });
 
@@ -210,7 +201,6 @@ export function NaijaBaseProvider({ children }) {
     };
   }, []);
 
-  // --- Logout ---
   const logout = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
@@ -220,10 +210,10 @@ export function NaijaBaseProvider({ children }) {
     setUserData(null);
   }, []);
 
-  // --- Reset Password ---
+  // --- 🚀 UPDATED: Redirect to /reset-password instead of /login ---
   const resetPassword = useCallback(async (email) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/login`, // 🚀 FIX: use current domain
+      redirectTo: `${window.location.origin}/reset-password`, // <--- CHANGED
     });
     if (error) {
       if (error.message.includes("rate limit")) {
@@ -244,12 +234,10 @@ export function NaijaBaseProvider({ children }) {
     return { ok: true, message: "Password reset link sent! Check your inbox." };
   }, []);
 
-  // --- 🚀 SECURE DELETE ACCOUNT (Calls Edge Function) ---
   const deleteAccount = useCallback(async () => {
     if (!user) return { ok: false, error: "No user logged in." };
 
     try {
-      // Call the secure Supabase Edge Function
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-user`,
         {
@@ -268,7 +256,6 @@ export function NaijaBaseProvider({ children }) {
         throw new Error(result.error || "Failed to delete account");
       }
 
-      // Clear local state
       setUser(null);
       setUserData(null);
 
@@ -282,7 +269,6 @@ export function NaijaBaseProvider({ children }) {
     }
   }, [user]);
 
-  // --- Update User Data (Partial) ---
   const updateUserData = useCallback(
     async (updater) => {
       if (!user) return;
@@ -302,7 +288,6 @@ export function NaijaBaseProvider({ children }) {
     [user],
   );
 
-  // --- Replace Entire User Data ---
   const replaceUserData = useCallback(
     async (newData) => {
       if (!user) return;
@@ -319,7 +304,6 @@ export function NaijaBaseProvider({ children }) {
     [user],
   );
 
-  // --- Construct Current User Object ---
   const currentUser = useMemo(() => {
     if (!user || !userData) return null;
     return {
@@ -334,7 +318,6 @@ export function NaijaBaseProvider({ children }) {
     };
   }, [user, userData]);
 
-  // --- Context Value ---
   const value = useMemo(
     () => ({
       state: { currentUserId: user?.id || null, loading },
@@ -372,7 +355,6 @@ export function NaijaBaseProvider({ children }) {
   );
 }
 
-// --- Hook for consuming the context ---
 export function useNaijaBase() {
   const ctx = useContext(NaijaBaseContext);
   if (!ctx) {
