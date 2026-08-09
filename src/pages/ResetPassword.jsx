@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { Lock, CheckCircle2, XCircle } from "lucide-react";
@@ -7,7 +7,7 @@ import { useNaijaBase } from "../context/NaijaBaseContext";
 
 export default function ResetPassword() {
   const navigate = useNavigate();
-  const { currentUser } = useNaijaBase(); // ✅ Detect if user is already logged in
+  const { currentUser } = useNaijaBase();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -16,21 +16,21 @@ export default function ResetPassword() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
-  useEffect(() => {
-    // 1. Check URL hash for recovery token
-    const hash = window.location.hash;
-    let hasValidRecoveryHash = false;
-    if (hash) {
-      const params = new URLSearchParams(hash.replace("#", "?"));
-      const type = params.get("type");
-      const accessToken = params.get("access_token");
-      if (type === "recovery" && accessToken) {
-        hasValidRecoveryHash = true;
-      }
-    }
+  // 🚨 CRITICAL: This prevents any unwanted redirects to Home.
+  const hasRecoveryHash = useRef(false);
 
-    // 2. If hash is valid, verify session
-    if (hasValidRecoveryHash) {
+  useEffect(() => {
+    // 1. Check the URL hash for the recovery token
+    const hash = window.location.hash;
+    const params = new URLSearchParams(hash.replace("#", "?"));
+    const type = params.get("type");
+    const accessToken = params.get("access_token");
+
+    // If the URL contains the recovery token, lock us onto this page
+    if (type === "recovery" && accessToken) {
+      hasRecoveryHash.current = true;
+
+      // Verify the session is active
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session) {
           setIsTokenValid(true);
@@ -40,7 +40,7 @@ export default function ResetPassword() {
         setIsCheckingToken(false);
       });
     } else {
-      // 3. If no hash but user is ALREADY logged in (auto-login from link), still show form
+      // No hash found. But maybe the user is already logged in (auto-login happened)?
       if (currentUser) {
         setIsTokenValid(true);
         setIsCheckingToken(false);
@@ -77,9 +77,16 @@ export default function ResetPassword() {
       setError(updateError.message || "Failed to update password.");
     } else {
       setSuccess(true);
+      // 🚨 Only navigate to login after success, and only if we haven't locked ourselves
       setTimeout(() => {
-        navigate("/login");
-      }, 3000);
+        // Only navigate away if we are NOT in recovery mode
+        if (!hasRecoveryHash.current) {
+          navigate("/login");
+        } else {
+          // Force logout and redirect to login after password change
+          supabase.auth.signOut().then(() => navigate("/login"));
+        }
+      }, 2500);
     }
   };
 
