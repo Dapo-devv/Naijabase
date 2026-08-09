@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { Lock, CheckCircle2, XCircle } from "lucide-react";
@@ -7,49 +7,23 @@ import { useNaijaBase } from "../context/NaijaBaseContext";
 
 export default function ResetPassword() {
   const navigate = useNavigate();
-  const { currentUser } = useNaijaBase();
+  const { isPasswordRecovery, clearPasswordRecovery } = useNaijaBase();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [isTokenValid, setIsTokenValid] = useState(false);
   const [isCheckingToken, setIsCheckingToken] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
-  // 🚨 CRITICAL: This prevents any unwanted redirects to Home.
-  const hasRecoveryHash = useRef(false);
-
   useEffect(() => {
-    // 1. Check the URL hash for the recovery token
-    const hash = window.location.hash;
-    const params = new URLSearchParams(hash.replace("#", "?"));
-    const type = params.get("type");
-    const accessToken = params.get("access_token");
-
-    // If the URL contains the recovery token, lock us onto this page
-    if (type === "recovery" && accessToken) {
-      hasRecoveryHash.current = true;
-
-      // Verify the session is active
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session) {
-          setIsTokenValid(true);
-        } else {
-          setError("Invalid or expired reset link. Please request a new one.");
-        }
-        setIsCheckingToken(false);
-      });
-    } else {
-      // No hash found. But maybe the user is already logged in (auto-login happened)?
-      if (currentUser) {
-        setIsTokenValid(true);
-        setIsCheckingToken(false);
-      } else {
-        setError("Invalid reset link. Please request a new password reset.");
-        setIsCheckingToken(false);
-      }
+    if (isPasswordRecovery) {
+      setIsCheckingToken(false);
+      return;
     }
-  }, [currentUser]);
+    // Give a short window in case the event fires slightly after mount
+    const timeout = setTimeout(() => setIsCheckingToken(false), 2000);
+    return () => clearTimeout(timeout);
+  }, [isPasswordRecovery]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -59,33 +33,22 @@ export default function ResetPassword() {
       setError("Password must be at least 6 characters.");
       return;
     }
-
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
       return;
     }
 
     setLoading(true);
-
-    const { error: updateError } = await supabase.auth.updateUser({
-      password: password,
-    });
-
+    const { error: updateError } = await supabase.auth.updateUser({ password });
     setLoading(false);
 
     if (updateError) {
       setError(updateError.message || "Failed to update password.");
     } else {
       setSuccess(true);
-      // 🚨 Only navigate to login after success, and only if we haven't locked ourselves
+      clearPasswordRecovery();
       setTimeout(() => {
-        // Only navigate away if we are NOT in recovery mode
-        if (!hasRecoveryHash.current) {
-          navigate("/login");
-        } else {
-          // Force logout and redirect to login after password change
-          supabase.auth.signOut().then(() => navigate("/login"));
-        }
+        supabase.auth.signOut().then(() => navigate("/login"));
       }, 2500);
     }
   };
@@ -126,7 +89,7 @@ export default function ResetPassword() {
               login...
             </p>
           </div>
-        ) : isTokenValid ? (
+        ) : isPasswordRecovery ? (
           <>
             <div className="flex flex-col items-center mb-6">
               <Lock className="w-8 h-8 text-primary dark:text-primary-400 mb-2" />

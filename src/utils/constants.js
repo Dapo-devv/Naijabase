@@ -56,11 +56,11 @@ export function getFreshUserData() {
     name: "",
     surname: "",
     email: "",
-    phoneNumber: "", // New field
+    phoneNumber: "", // New field for Personal Info
     timezone: "Africa/Lagos", // New field
     profilePicture: "",
-    theme: "light", // Default theme
-    loginAlerts: true, // New security setting
+    theme: "light",
+    loginAlerts: true, // New security layer
     marketItems: ["Rice", "Beans", "Garri", "Tomatoes", "Oil"],
     marketLogs: [],
     generator: {

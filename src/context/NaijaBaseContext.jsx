@@ -26,6 +26,7 @@ export function NaijaBaseProvider({ children }) {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [emailConfirmationSent, setEmailConfirmationSent] = useState(false);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
 
   const fetchUserData = useCallback(async (userId) => {
     if (!userId) return;
@@ -71,6 +72,10 @@ export function NaijaBaseProvider({ children }) {
     const { data: listener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (isMounted) {
+          // Track recovery event
+          if (event === "PASSWORD_RECOVERY") setIsPasswordRecovery(true);
+          if (event === "SIGNED_OUT") setIsPasswordRecovery(false);
+
           if (session?.user) {
             setUser(session.user);
             await fetchUserData(session.user.id);
@@ -148,6 +153,7 @@ export function NaijaBaseProvider({ children }) {
     await supabase.auth.signOut();
     setUser(null);
     setUserData(null);
+    setIsPasswordRecovery(false);
   }, []);
 
   const resetPassword = useCallback(async (email) => {
@@ -183,6 +189,7 @@ export function NaijaBaseProvider({ children }) {
         throw new Error(result.error || "Failed to delete account");
       setUser(null);
       setUserData(null);
+      setIsPasswordRecovery(false);
       return { ok: true, message: "Account deleted." };
     } catch (err) {
       return { ok: false, error: err.message };
@@ -220,6 +227,11 @@ export function NaijaBaseProvider({ children }) {
     [user],
   );
 
+  const clearPasswordRecovery = useCallback(
+    () => setIsPasswordRecovery(false),
+    [],
+  );
+
   const currentUser = useMemo(() => {
     if (!user || !userData) return null;
     return {
@@ -247,6 +259,8 @@ export function NaijaBaseProvider({ children }) {
       replaceUserData,
       emailConfirmationSent,
       resendConfirmation,
+      isPasswordRecovery,
+      clearPasswordRecovery,
     }),
     [
       user,
@@ -261,6 +275,8 @@ export function NaijaBaseProvider({ children }) {
       replaceUserData,
       emailConfirmationSent,
       resendConfirmation,
+      isPasswordRecovery,
+      clearPasswordRecovery,
     ],
   );
 
