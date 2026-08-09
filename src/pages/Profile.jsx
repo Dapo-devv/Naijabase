@@ -33,6 +33,7 @@ export default function Profile() {
   const [isEditingTheme, setIsEditingTheme] = useState(false);
   const [tempTheme, setTempTheme] = useState(currentUser?.theme || "light");
 
+  // Loading states
   const [isDeleting, setIsDeleting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -76,6 +77,7 @@ export default function Profile() {
 
   const handleExport = () => {
     setIsExporting(true);
+    // simulate small delay
     setTimeout(() => {
       const date = todayISO();
       const blob = new Blob([JSON.stringify(currentUser.data, null, 2)], {
@@ -134,6 +136,7 @@ export default function Profile() {
     e.target.value = "";
   };
 
+  // Profile Picture Handler
   const handleImageUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -151,6 +154,7 @@ export default function Profile() {
     e.target.value = "";
   };
 
+  // Theme Handler
   const handleThemeSave = () => {
     updateUserData((d) => ({
       ...d,
@@ -338,7 +342,7 @@ export default function Profile() {
         )}
       </div>
 
-      {/* --- Contact & Support (Instagram) --- */}
+      {/* --- Contact & Support (Instagram Only) --- */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
         <h3 className="text-lg font-bold text-neutral-text dark:text-white mb-4 flex items-center gap-2">
           <MessageCircle className="w-5 h-5 text-primary dark:text-primary-400" />{" "}
@@ -348,7 +352,7 @@ export default function Profile() {
           Have a question, feedback, or need help? Reach out to us on Instagram!
         </p>
 
-        {/* Instagram Direct Link - corrected handle */}
+        {/* Instagram Direct Link - UPDATED to trackcash.ng */}
         <a
           href="https://www.instagram.com/trackcash.ng"
           target="_blank"

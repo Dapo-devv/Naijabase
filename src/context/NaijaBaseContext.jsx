@@ -12,11 +12,6 @@ import { getFreshUserData } from "../utils/constants";
 const NaijaBaseContext = createContext(null);
 
 // --- Turn a Supabase signup error into something safe to show a user ---
-// Supabase occasionally surfaces an opaque/empty payload (e.g. "{}") when
-// the failure happens server-side (a DB trigger, a broken auth hook, an
-// email-sending failure, etc). authError.message is still just a string in
-// that case, but it's not a sentence — so detect that and fall back instead
-// of ever rendering raw response debris to the user.
 function getSignupErrorMessage(authError) {
   const raw =
     typeof authError?.message === "string" ? authError.message.trim() : "";
@@ -129,7 +124,7 @@ export function NaijaBaseProvider({ children }) {
         password,
         options: {
           data: { username, name, surname },
-          emailRedirectTo: window.location.origin + "/login",
+          emailRedirectTo: `${window.location.origin}/login`, // 🚀 FIX: use current domain
         },
       });
 
@@ -202,7 +197,7 @@ export function NaijaBaseProvider({ children }) {
       type: "signup",
       email: email,
       options: {
-        emailRedirectTo: window.location.origin + "/login",
+        emailRedirectTo: `${window.location.origin}/login`, // 🚀 FIX: use current domain
       },
     });
 
@@ -228,7 +223,7 @@ export function NaijaBaseProvider({ children }) {
   // --- Reset Password ---
   const resetPassword = useCallback(async (email) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + "/login",
+      redirectTo: `${window.location.origin}/login`, // 🚀 FIX: use current domain
     });
     if (error) {
       if (error.message.includes("rate limit")) {
