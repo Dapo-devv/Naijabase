@@ -7,7 +7,7 @@ import { useNaijaBase } from "../context/NaijaBaseContext";
 
 export default function ResetPassword() {
   const navigate = useNavigate();
-  const { currentUser } = useNaijaBase(); // Check if user is already logged in
+  const { currentUser } = useNaijaBase(); // ✅ Detect if user is already logged in
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -17,7 +17,7 @@ export default function ResetPassword() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    // 1. Check if we have a recovery token in the URL hash
+    // 1. Check URL hash for recovery token
     const hash = window.location.hash;
     let hasValidRecoveryHash = false;
     if (hash) {
@@ -29,7 +29,7 @@ export default function ResetPassword() {
       }
     }
 
-    // 2. If hash is present and valid, verify the session
+    // 2. If hash is valid, verify session
     if (hasValidRecoveryHash) {
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session) {
@@ -40,8 +40,7 @@ export default function ResetPassword() {
         setIsCheckingToken(false);
       });
     } else {
-      // 3. If NO hash, but the user is ALREADY logged in (e.g., redirect lost the hash),
-      // we still show the form so they can reset their password.
+      // 3. If no hash but user is ALREADY logged in (auto-login from link), still show form
       if (currentUser) {
         setIsTokenValid(true);
         setIsCheckingToken(false);
