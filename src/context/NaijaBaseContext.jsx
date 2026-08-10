@@ -72,7 +72,6 @@ export function NaijaBaseProvider({ children }) {
     const { data: listener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (isMounted) {
-          // Track recovery event
           if (event === "PASSWORD_RECOVERY") setIsPasswordRecovery(true);
           if (event === "SIGNED_OUT") setIsPasswordRecovery(false);
 
@@ -100,7 +99,7 @@ export function NaijaBaseProvider({ children }) {
         password,
         options: {
           data: { username, name, surname },
-          emailRedirectTo: `${window.location.origin}/login`,
+          emailRedirectTo: `${window.location.origin}/login`, // ✅ User will land here after confirmation
         },
       });
       if (authError)
@@ -139,6 +138,7 @@ export function NaijaBaseProvider({ children }) {
     return { ok: true };
   }, []);
 
+  // 🚀 Resend confirmation email
   const resendConfirmation = useCallback(async (email) => {
     const { error } = await supabase.auth.resend({
       type: "signup",

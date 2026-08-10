@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate, Navigate } from "react-router-dom";
-import { Mail, Lock, LogIn, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, LogIn, Eye, EyeOff, RefreshCcw } from "lucide-react";
 import { useNaijaBase } from "../context/NaijaBaseContext";
 import LoadingSpinner from "../components/LoadingSpinner";
 
@@ -19,12 +19,27 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [isResending, setIsResending] = useState(false);
 
   const [showReset, setShowReset] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [resetMsg, setResetMsg] = useState(null);
 
-  // 🛡️ Only redirect if logged in AND NOT in recovery mode
+  // 🚀 FIX: Automatically redirect to dashboard if Supabase finishes processing the confirmation hash
+  useEffect(() => {
+    const hash = window.location.hash;
+    // If the URL contains a signup confirmation hash, give Supabase up to 2 seconds to process it
+    if (hash && hash.includes("type=signup")) {
+      const timer = setTimeout(() => {
+        if (state.currentUserId != null && !isPasswordRecovery) {
+          navigate("/");
+        }
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [state.currentUserId, isPasswordRecovery, navigate]);
+
+  // Only redirect if logged in AND NOT in recovery mode AND NOT in the initial hash-processing phase
   if (state.currentUserId != null && !isPasswordRecovery) {
     return <Navigate to="/" replace />;
   }
@@ -60,6 +75,22 @@ export default function Login() {
     }
   };
 
+  const handleResendConfirmation = async () => {
+    if (!email.trim()) {
+      setError("Please enter your email address to resend the confirmation.");
+      return;
+    }
+    setIsResending(true);
+    setError("");
+    const res = await resendConfirmation(email.trim());
+    setIsResending(false);
+    if (!res.ok) {
+      setError(res.error || "Failed to resend confirmation. Please try again.");
+    } else {
+      setSuccessMessage("Confirmation email resent! Please check your inbox.");
+    }
+  };
+
   return (
     <div className="max-w-md mx-auto px-4 py-8 animate-fade-in">
       <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-3xl shadow-2xl border border-white/20 dark:border-gray-700/50 p-6 transition-colors duration-300">
@@ -78,7 +109,6 @@ export default function Login() {
           </p>
         </div>
 
-        {/* Warm, premium Information Card */}
         <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl p-3 mb-4 border border-amber-200 dark:border-amber-800 shadow-sm">
           <p className="text-xs text-amber-800 dark:text-amber-200 leading-relaxed text-center font-medium">
             {showReset
@@ -142,7 +172,23 @@ export default function Login() {
 
             {error && (
               <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-sm rounded-xl p-3">
-                {error}
+                <p className="mb-2">{error}</p>
+                {/* 🚀 FIX: If the error is about email confirmation, show the Resend button */}
+                {error.toLowerCase().includes("confirm your email") && (
+                  <button
+                    type="button"
+                    onClick={handleResendConfirmation}
+                    disabled={isResending}
+                    className="flex items-center justify-center gap-2 w-full py-2 mt-1 bg-primary/10 text-primary font-semibold rounded-lg hover:bg-primary/20 transition-colors text-xs"
+                  >
+                    {isResending ? (
+                      <LoadingSpinner size={16} color="text-primary" />
+                    ) : (
+                      <RefreshCcw className="w-3 h-3" />
+                    )}
+                    {isResending ? "Resending..." : "Resend Confirmation Email"}
+                  </button>
+                )}
               </div>
             )}
 
