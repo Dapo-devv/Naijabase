@@ -15,10 +15,12 @@ import {
   XCircle,
   Bell,
   Menu,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { useNaijaBase } from "../context/NaijaBaseContext";
 import LoadingSpinner from "../components/LoadingSpinner";
-import { supabase } from "../lib/supabase";
+import { supabase } from "../lib/supabase"; // 👈 Import supabase directly for global logout
 
 export default function Profile() {
   const { currentUser, logout, deleteAccount, updateUserData } = useNaijaBase();
@@ -28,9 +30,10 @@ export default function Profile() {
   const [isLoading, setIsLoading] = useState(false);
   const [msg, setMsg] = useState(null);
 
-  // --- Form State ---
-  const [name, setName] = useState(currentUser?.name || "");
-  const [surname, setSurname] = useState(currentUser?.surname || "");
+  // --- Form State (Name & Surname are now read-only) ---
+  // We keep the state for display, but they won't be editable via inputs.
+  const name = currentUser?.name || "";
+  const surname = currentUser?.surname || "";
   const [phoneNumber, setPhoneNumber] = useState(
     currentUser?.data?.phoneNumber || "",
   );
@@ -38,6 +41,7 @@ export default function Profile() {
     currentUser?.data?.timezone || "Africa/Lagos",
   );
 
+  // Security
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -45,7 +49,12 @@ export default function Profile() {
     currentUser?.data?.loginAlerts ?? true,
   );
 
-  // Preferences (immediate)
+  // 👁️ Password visibility toggles
+  const [showCurrentPW, setShowCurrentPW] = useState(false);
+  const [showNewPW, setShowNewPW] = useState(false);
+  const [showConfirmPW, setShowConfirmPW] = useState(false);
+
+  // Preferences
   const [theme, setTheme] = useState(currentUser?.theme || "light");
   const [language, setLanguage] = useState("English (US)");
 
@@ -60,13 +69,11 @@ export default function Profile() {
   const handleThemeToggle = () => {
     const newTheme = theme === "dark" ? "light" : "dark";
     setTheme(newTheme);
-    // Apply theme to DOM immediately
     if (newTheme === "dark") {
       document.documentElement.classList.add("dark");
     } else {
       document.documentElement.classList.remove("dark");
     }
-    // Save to database immediately
     updateUserData((d) => ({ ...d, theme: newTheme }));
     showToast(`Theme switched to ${newTheme} mode`);
   };
@@ -84,7 +91,7 @@ export default function Profile() {
     e.target.value = "";
   };
 
-  // --- Save All Changes (including password) ---
+  // --- Save All Changes (Phone, Timezone, Password, etc.) ---
   const handleSaveChanges = async () => {
     setIsLoading(true);
     let error = null;
@@ -101,7 +108,6 @@ export default function Profile() {
         setIsLoading(false);
         return;
       }
-      // Update password via Supabase Auth
       const { error: authError } = await supabase.auth.updateUser({
         password: newPassword,
       });
@@ -110,21 +116,18 @@ export default function Profile() {
         setIsLoading(false);
         return;
       }
-      // Clear password fields after success
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
       showToast("Password updated successfully!");
     }
 
-    // 2. Update other profile data
+    // 2. Update other profile data (Name & Surname are left unchanged intentionally)
     const updatedData = {
       ...currentUser.data,
-      name,
-      surname,
       phoneNumber,
       timezone,
-      theme, // already saved earlier, but ensure consistency
+      theme,
       loginAlerts,
     };
     updateUserData(updatedData);
@@ -135,6 +138,28 @@ export default function Profile() {
   const handleLogout = () => {
     logout();
     navigate("/login");
+  };
+
+  // 🚀 PERFECT "Log out all devices" function (log out current + all others)
+  const handleLogoutAllDevices = async () => {
+    if (
+      !window.confirm(
+        "This will log you out from all devices (including this one). Continue?",
+      )
+    )
+      return;
+    setIsLoading(true);
+    try {
+      // 'global' scope logs out all sessions including the current one
+      await supabase.auth.signOut({ scope: "global" });
+      // Clear local state and redirect to login
+      logout();
+      navigate("/login");
+    } catch (err) {
+      showToast("Failed to log out all devices.", "error");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleDeleteAccount = async () => {
@@ -223,7 +248,7 @@ export default function Profile() {
         </button>
       </div>
 
-      {/* --- Personal Information --- */}
+      {/* --- Personal Information (Name & Surname read-only) --- */}
       <div className="mx-4 mb-4 bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-200 dark:border-gray-700">
         <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4 border-b border-gray-100 dark:border-gray-700 pb-2">
           Personal Information
@@ -233,23 +258,19 @@ export default function Profile() {
             <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
               Full Name
             </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-primary/30 text-sm"
-            />
+            {/* 🛑 Read-only display */}
+            <div className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-400 cursor-not-allowed text-sm">
+              {name}
+            </div>
           </div>
           <div>
             <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
               Surname
             </label>
-            <input
-              type="text"
-              value={surname}
-              onChange={(e) => setSurname(e.target.value)}
-              className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-primary/30 text-sm"
-            />
+            {/* 🛑 Read-only display */}
+            <div className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-400 cursor-not-allowed text-sm">
+              {surname}
+            </div>
           </div>
           <div>
             <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
@@ -295,50 +316,94 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* --- Security --- */}
+      {/* --- Security (with Eye Toggles) --- */}
       <div className="mx-4 mb-4 bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-200 dark:border-gray-700">
         <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4 border-b border-gray-100 dark:border-gray-700 pb-2">
           Security
         </h3>
         <div className="space-y-4">
-          <div>
-            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
+          {/* Current Password */}
+          <div className="relative">
+            <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
               Current Password
             </label>
-            <input
-              type="password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-primary/30 text-sm"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
-              New Password
-            </label>
-            <input
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="Enter new password"
-              className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-primary/30 text-sm"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
-              Confirm Password
-            </label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Confirm new password"
-              className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-primary/30 text-sm"
-            />
+            <div className="relative">
+              <input
+                type={showCurrentPW ? "text" : "password"}
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full pl-3 pr-10 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-primary/30 text-sm"
+              />
+              <button
+                type="button"
+                onClick={() => setShowCurrentPW(!showCurrentPW)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                {showCurrentPW ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
+              </button>
+            </div>
           </div>
 
-          {/* Extra Security Layer: Login Alerts (immediate toggle) */}
+          {/* New Password */}
+          <div className="relative">
+            <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
+              New Password
+            </label>
+            <div className="relative">
+              <input
+                type={showNewPW ? "text" : "password"}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter new password"
+                className="w-full pl-3 pr-10 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-primary/30 text-sm"
+              />
+              <button
+                type="button"
+                onClick={() => setShowNewPW(!showNewPW)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                {showNewPW ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Confirm Password */}
+          <div className="relative">
+            <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
+              Confirm Password
+            </label>
+            <div className="relative">
+              <input
+                type={showConfirmPW ? "text" : "password"}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm new password"
+                className="w-full pl-3 pr-10 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-primary/30 text-sm"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPW(!showConfirmPW)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                {showConfirmPW ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Extra Security Layer: Login Alerts */}
           <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-700">
             <div className="flex-1 pr-4">
               <div className="flex items-center gap-2">
@@ -368,15 +433,18 @@ export default function Profile() {
             </button>
           </div>
 
-          {/* Extra Security Layer: Log out all devices */}
+          {/* Extra Security Layer: Log out all devices (Fully Working) */}
           <button
-            onClick={() => {
-              if (window.confirm("Log out from all devices?"))
-                showToast("Logged out from other devices.");
-            }}
-            className="w-full flex items-center justify-center gap-2 py-2.5 mt-2 border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 rounded-lg text-sm font-medium hover:bg-blue-50 dark:hover:bg-blue-900/30"
+            onClick={handleLogoutAllDevices}
+            disabled={isLoading}
+            className="w-full flex items-center justify-center gap-2 py-2.5 mt-2 border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 rounded-lg text-sm font-medium hover:bg-blue-50 dark:hover:bg-blue-900/30 disabled:opacity-50"
           >
-            <Smartphone className="w-4 h-4" /> Log out all devices
+            {isLoading ? (
+              <LoadingSpinner size={16} color="text-blue-600" />
+            ) : (
+              <Smartphone className="w-4 h-4" />
+            )}
+            {isLoading ? "Logging out..." : "Log out all devices"}
           </button>
         </div>
       </div>
