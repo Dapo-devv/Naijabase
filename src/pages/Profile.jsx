@@ -17,10 +17,12 @@ import {
   Menu,
   Eye,
   EyeOff,
+  AlertTriangle,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useNaijaBase } from "../context/NaijaBaseContext";
 import LoadingSpinner from "../components/LoadingSpinner";
-import { supabase } from "../lib/supabase"; // 👈 Import supabase directly for global logout
+import { supabase } from "../lib/supabase";
 
 export default function Profile() {
   const { currentUser, logout, deleteAccount, updateUserData } = useNaijaBase();
@@ -29,9 +31,9 @@ export default function Profile() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [msg, setMsg] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  // --- Form State (Name & Surname are now read-only) ---
-  // We keep the state for display, but they won't be editable via inputs.
+  // --- Form State ---
   const name = currentUser?.name || "";
   const surname = currentUser?.surname || "";
   const [phoneNumber, setPhoneNumber] = useState(
@@ -41,7 +43,6 @@ export default function Profile() {
     currentUser?.data?.timezone || "Africa/Lagos",
   );
 
-  // Security
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -49,12 +50,10 @@ export default function Profile() {
     currentUser?.data?.loginAlerts ?? true,
   );
 
-  // 👁️ Password visibility toggles
   const [showCurrentPW, setShowCurrentPW] = useState(false);
   const [showNewPW, setShowNewPW] = useState(false);
   const [showConfirmPW, setShowConfirmPW] = useState(false);
 
-  // Preferences
   const [theme, setTheme] = useState(currentUser?.theme || "light");
   const [language, setLanguage] = useState("English (US)");
 
@@ -65,7 +64,6 @@ export default function Profile() {
     setTimeout(() => setMsg(null), 3000);
   };
 
-  // --- Immediate Theme Toggle ---
   const handleThemeToggle = () => {
     const newTheme = theme === "dark" ? "light" : "dark";
     setTheme(newTheme);
@@ -78,7 +76,6 @@ export default function Profile() {
     showToast(`Theme switched to ${newTheme} mode`);
   };
 
-  // --- Profile Picture Upload ---
   const handleImageUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -91,12 +88,9 @@ export default function Profile() {
     e.target.value = "";
   };
 
-  // --- Save All Changes (Phone, Timezone, Password, etc.) ---
   const handleSaveChanges = async () => {
     setIsLoading(true);
-    let error = null;
 
-    // 1. Handle Password Change if requested
     if (newPassword || confirmPassword) {
       if (newPassword !== confirmPassword) {
         showToast("New passwords do not match.", "error");
@@ -122,7 +116,6 @@ export default function Profile() {
       showToast("Password updated successfully!");
     }
 
-    // 2. Update other profile data (Name & Surname are left unchanged intentionally)
     const updatedData = {
       ...currentUser.data,
       phoneNumber,
@@ -140,7 +133,6 @@ export default function Profile() {
     navigate("/login");
   };
 
-  // 🚀 PERFECT "Log out all devices" function (log out current + all others)
   const handleLogoutAllDevices = async () => {
     if (
       !window.confirm(
@@ -150,9 +142,7 @@ export default function Profile() {
       return;
     setIsLoading(true);
     try {
-      // 'global' scope logs out all sessions including the current one
       await supabase.auth.signOut({ scope: "global" });
-      // Clear local state and redirect to login
       logout();
       navigate("/login");
     } catch (err) {
@@ -163,10 +153,7 @@ export default function Profile() {
   };
 
   const handleDeleteAccount = async () => {
-    if (
-      !window.confirm("Delete your account permanently? This cannot be undone!")
-    )
-      return;
+    setShowDeleteModal(false);
     const result = await deleteAccount();
     if (!result.ok)
       showToast(result.error || "Failed to delete account.", "error");
@@ -177,7 +164,8 @@ export default function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f5f6fa] dark:bg-gray-900 pb-24">
+    <div className="min-h-screen bg-[#f5f6fa] dark:bg-gray-900 pb-8">
+      {/* Toast */}
       {msg && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-md bg-white dark:bg-gray-800 shadow-lg rounded-xl p-4 flex items-center gap-3 border border-gray-200 dark:border-gray-700 animate-fade-in">
           {msg.type === "success" ? (
@@ -191,7 +179,7 @@ export default function Profile() {
         </div>
       )}
 
-      {/* --- Header --- */}
+      {/* Header */}
       <div className="bg-white dark:bg-gray-800 px-5 py-4 flex items-center justify-between shadow-sm border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10">
         <h1 className="text-xl font-bold text-gray-800 dark:text-white">
           TrackCash
@@ -206,7 +194,7 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* --- Avatar Section --- */}
+      {/* Avatar */}
       <div className="flex flex-col items-center mt-6 mb-6">
         <div className="relative group">
           <div className="w-24 h-24 rounded-full bg-primary-50 dark:bg-primary-900/30 border-2 border-gray-200 dark:border-gray-700 flex items-center justify-center overflow-hidden">
@@ -248,7 +236,7 @@ export default function Profile() {
         </button>
       </div>
 
-      {/* --- Personal Information (Name & Surname read-only) --- */}
+      {/* Personal Information */}
       <div className="mx-4 mb-4 bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-200 dark:border-gray-700">
         <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4 border-b border-gray-100 dark:border-gray-700 pb-2">
           Personal Information
@@ -258,7 +246,6 @@ export default function Profile() {
             <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
               Full Name
             </label>
-            {/* 🛑 Read-only display */}
             <div className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-400 cursor-not-allowed text-sm">
               {name}
             </div>
@@ -267,7 +254,6 @@ export default function Profile() {
             <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
               Surname
             </label>
-            {/* 🛑 Read-only display */}
             <div className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-400 cursor-not-allowed text-sm">
               {surname}
             </div>
@@ -316,13 +302,12 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* --- Security (with Eye Toggles) --- */}
+      {/* Security */}
       <div className="mx-4 mb-4 bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-200 dark:border-gray-700">
         <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4 border-b border-gray-100 dark:border-gray-700 pb-2">
           Security
         </h3>
         <div className="space-y-4">
-          {/* Current Password */}
           <div className="relative">
             <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
               Current Password
@@ -349,7 +334,6 @@ export default function Profile() {
             </div>
           </div>
 
-          {/* New Password */}
           <div className="relative">
             <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
               New Password
@@ -376,7 +360,6 @@ export default function Profile() {
             </div>
           </div>
 
-          {/* Confirm Password */}
           <div className="relative">
             <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
               Confirm Password
@@ -403,7 +386,6 @@ export default function Profile() {
             </div>
           </div>
 
-          {/* Extra Security Layer: Login Alerts */}
           <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-700">
             <div className="flex-1 pr-4">
               <div className="flex items-center gap-2">
@@ -433,7 +415,6 @@ export default function Profile() {
             </button>
           </div>
 
-          {/* Extra Security Layer: Log out all devices (Fully Working) */}
           <button
             onClick={handleLogoutAllDevices}
             disabled={isLoading}
@@ -449,7 +430,7 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* --- Preferences --- */}
+      {/* Preferences */}
       <div className="mx-4 mb-4 bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-200 dark:border-gray-700">
         <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4 border-b border-gray-100 dark:border-gray-700 pb-2">
           Preferences
@@ -508,17 +489,8 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* --- Danger Zone & Sticky Save Button --- */}
-      <div className="mx-4 mb-6 bg-red-50 dark:bg-red-900/20 rounded-2xl p-5 border border-red-200 dark:border-red-800">
-        <button
-          onClick={handleDeleteAccount}
-          className="w-full flex items-center justify-center gap-2 py-2.5 bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 rounded-lg text-sm font-medium hover:bg-red-200 dark:hover:bg-red-900/60"
-        >
-          <Trash2 className="w-4 h-4" /> Delete Account
-        </button>
-      </div>
-
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg z-40">
+      {/* ✅ SAVE CHANGES BUTTON (First in scroll order) */}
+      <div className="mx-4 mb-3">
         <button
           onClick={handleSaveChanges}
           disabled={isLoading}
@@ -532,6 +504,64 @@ export default function Profile() {
           {isLoading ? "Saving..." : "Save Changes"}
         </button>
       </div>
+
+      {/* 🛡️ DELETE ACCOUNT BUTTON (Second in scroll order) */}
+      <div className="mx-4 mb-8">
+        <button
+          onClick={() => setShowDeleteModal(true)}
+          className="w-full flex items-center justify-center gap-2 py-3 border border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 rounded-xl text-sm font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+        >
+          <Trash2 className="w-4 h-4" /> Delete Account
+        </button>
+      </div>
+
+      {/* ⚠️ DELETE CONFIRMATION MODAL */}
+      <AnimatePresence>
+        {showDeleteModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/80 p-4 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: "spring", damping: 20 }}
+              className="bg-white dark:bg-gray-800 w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700 p-6"
+            >
+              <div className="flex flex-col items-center text-center space-y-4">
+                <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                  <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" />
+                </div>
+                <h3 className="text-xl font-bold text-neutral-text dark:text-white">
+                  Delete Account?
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  This action is <strong>permanent</strong>. All your data
+                  (market logs, trips, plans, and savings) will be removed
+                  immediately.
+                </p>
+                <div className="flex gap-3 w-full pt-2">
+                  <button
+                    onClick={() => setShowDeleteModal(false)}
+                    className="flex-1 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDeleteAccount}
+                    className="flex-1 py-3 bg-red-600 text-white rounded-xl font-medium hover:bg-red-700 transition-colors"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
