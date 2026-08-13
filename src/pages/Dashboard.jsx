@@ -30,45 +30,45 @@ export default function Dashboard() {
               Your financial universe at a glance.
             </p>
           </div>
-          
-          {/* Premium Ad Slot (Top Right) */}
+
           <div className="w-full sm:w-auto">
-            <AdSlot 
-              width={300} 
-              height={60} 
-              label="Ad Space" 
-              className="rounded-xl bg-gray-50/50 dark:bg-gray-800/50 border-dashed border-gray-200 dark:border-gray-700" 
+            <AdSlot
+              width={300}
+              height={60}
+              label="Ad Space"
+              className="rounded-xl bg-gray-50/50 dark:bg-gray-800/50 border-dashed border-gray-200 dark:border-gray-700"
             />
           </div>
         </div>
 
-        {/* --- Main Summary Component (No Buttons) --- */}
+        {/* --- Main Summary Component (Optimized) --- */}
         <DashboardSummary />
 
         {/* --- Footer Banner Ad --- */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.6 }}
           className="mt-8"
         >
-          <AdSlot 
-            width={728} 
-            height={90} 
-            label="Ad Space" 
-            className="rounded-2xl bg-gray-50/50 dark:bg-gray-800/50 border-dashed border-gray-200 dark:border-gray-700" 
+          <AdSlot
+            width={728}
+            height={90}
+            label="Ad Space"
+            className="rounded-2xl bg-gray-50/50 dark:bg-gray-800/50 border-dashed border-gray-200 dark:border-gray-700"
           />
         </motion.div>
 
-        {/* --- Bottom Tip / Quick Insight --- */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.7 }}
           className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500 justify-center pt-2"
         >
-          <TrendingUp className="w-3 h-3" /> 
-          <span>Pro tip: Use the "Plan Income" tab to budget your monthly spending.</span>
+          <TrendingUp className="w-3 h-3" />
+          <span>
+            Pro tip: Use the "Plan Income" tab to budget your monthly spending.
+          </span>
         </motion.div>
       </div>
     </motion.div>

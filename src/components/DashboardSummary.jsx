@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   ShoppingCart,
@@ -15,143 +16,203 @@ const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: { staggerChildren: 0.1 },
+    transition: { staggerChildren: 0.08 },
   },
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
+  hidden: { opacity: 0, y: 15 },
   visible: { opacity: 1, y: 0 },
 };
+
+// Skeleton loader component
+const SkeletonCard = () => (
+  <div className="bg-gray-100 dark:bg-gray-700/50 rounded-2xl p-5 animate-pulse border-l-4 border-gray-300 dark:border-gray-600">
+    <div className="flex items-center justify-between mb-3">
+      <div className="w-10 h-10 rounded-xl bg-gray-300 dark:bg-gray-600" />
+      <div className="w-10 h-4 bg-gray-200 dark:bg-gray-500 rounded" />
+    </div>
+    <div className="h-4 w-20 bg-gray-200 dark:bg-gray-500 rounded mb-2" />
+    <div className="h-8 w-32 bg-gray-300 dark:bg-gray-600 rounded" />
+    <div className="mt-2 h-3 w-24 bg-gray-200 dark:bg-gray-500 rounded" />
+  </div>
+);
 
 export default function DashboardSummary() {
   const { currentUser } = useNaijaBase();
   const data = currentUser?.data;
-  if (!data) return null;
+
+  // Show skeleton while data is loading
+  if (!data) {
+    return (
+      <div className="space-y-6">
+        {/* Hero skeleton */}
+        <div className="bg-gradient-to-br from-gray-300 to-gray-400 dark:from-gray-700 dark:to-gray-800 rounded-2xl p-5 sm:p-6 h-32 animate-pulse" />
+
+        {/* 4 cards skeleton */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <SkeletonCard key={i} />
+          ))}
+        </div>
+
+        {/* 2-column snapshot skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-white/80 dark:bg-gray-800/80 rounded-2xl p-5 h-32 animate-pulse" />
+          <div className="bg-white/80 dark:bg-gray-800/80 rounded-2xl p-5 h-32 animate-pulse" />
+        </div>
+      </div>
+    );
+  }
 
   const today = todayISO();
   const currentMonth = today.slice(0, 7);
 
-  // --- Market (Expenses) Calculations ---
-  const monthlySpend = data.marketLogs
-    .filter((l) => l.date.startsWith(currentMonth))
-    .reduce(
+  // --- Memoized Calculations ---
+  const {
+    monthlySpend,
+    todaySpend,
+    monthlySales,
+    latestPlan,
+    planRemaining,
+    planColor,
+    progressPercent,
+    activeTrips,
+  } = useMemo(() => {
+    // Market (Expenses)
+    const monthlySpend = data.marketLogs
+      .filter((l) => l.date.startsWith(currentMonth))
+      .reduce(
+        (sum, log) =>
+          sum + Object.values(log.prices).reduce((s, v) => s + (v || 0), 0),
+        0,
+      );
+
+    const todayLogs = data.marketLogs.filter(
+      (l) => l.date.split("T")[0] === today,
+    );
+    const todaySpend = todayLogs.reduce(
       (sum, log) =>
         sum + Object.values(log.prices).reduce((s, v) => s + (v || 0), 0),
       0,
     );
 
-  const todayLogs = data.marketLogs.filter(
-    (l) => l.date.split("T")[0] === today,
-  );
-  const todaySpend = todayLogs.reduce(
-    (sum, log) =>
-      sum + Object.values(log.prices).reduce((s, v) => s + (v || 0), 0),
-    0,
-  );
+    // Finance (Business)
+    const businessEntries = data.generator?.businessEntries || [];
+    const monthlySales = businessEntries
+      .filter((e) => e.type === "sale" && e.date.startsWith(currentMonth))
+      .reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
 
-  // --- Finance (Business) Calculations ---
-  const businessEntries = data.generator?.businessEntries || [];
-  const monthlySales = businessEntries
-    .filter((e) => e.type === "sale" && e.date.startsWith(currentMonth))
-    .reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
-
-  // --- Spending Plan Calculations ---
-  const spendingPlans = data.generator?.spendingPlans || [];
-  const latestPlan = spendingPlans.sort((a, b) =>
-    b.date.localeCompare(a.date),
-  )[0];
-
-  // Calculate Plan Remaining Balance and progress
-  let planRemaining = null;
-  let planStatusLabel = "";
-  let planColor = "";
-  let progressPercent = 0;
-
-  if (latestPlan) {
-    planRemaining = latestPlan.totalIncome - latestPlan.totalAllocated;
-    if (planRemaining >= 0) {
-      planStatusLabel = "Plan Remaining";
-      planColor = "text-green-300";
-    } else {
-      planStatusLabel = "Plan Overspent";
-      planColor = "text-red-300";
+    // Spending Plan
+    const spendingPlans = data.generator?.spendingPlans || [];
+    const latestPlan = spendingPlans.sort((a, b) =>
+      b.date.localeCompare(a.date),
+    )[0];
+    let planRemaining = null;
+    let planColor = "";
+    let progressPercent = 0;
+    if (latestPlan) {
+      planRemaining = latestPlan.totalIncome - latestPlan.totalAllocated;
+      planColor = planRemaining >= 0 ? "text-green-300" : "text-red-300";
+      progressPercent = Math.min(
+        100,
+        (latestPlan.totalAllocated / latestPlan.totalIncome) * 100,
+      );
     }
-    progressPercent = Math.min(
-      100,
-      (latestPlan.totalAllocated / latestPlan.totalIncome) * 100,
-    );
-  }
 
-  // --- Trip Calculations ---
-  const trips = data.trips || [];
-  const activeTrips = trips.filter((t) => new Date(t.date) >= new Date());
+    // Trips
+    const trips = data.trips || [];
+    const activeTrips = trips.filter((t) => new Date(t.date) >= new Date());
 
-  // Card styling helper for the 4 main cards
-  const cardConfigs = [
-    {
-      key: "spend",
-      label: "Monthly Spend",
-      value: naira(monthlySpend),
-      sub: `Today: ${naira(todaySpend)}`,
-      icon: ShoppingCart,
-      borderColor: "border-red-500",
-      bgColor: "bg-red-50/40 dark:bg-red-900/20",
-      iconColor: "bg-red-500 text-white",
-    },
-    {
-      key: "revenue",
-      label: "Business Revenue",
-      value: naira(monthlySales),
-      sub: `${businessEntries.filter((e) => e.type === "sale" && e.date.startsWith(currentMonth)).length} transactions`,
-      icon: Briefcase,
-      borderColor: "border-green-500",
-      bgColor: "bg-green-50/40 dark:bg-green-900/20",
-      iconColor: "bg-green-500 text-white",
-    },
-    {
-      key: "plan",
-      label: "Spending Plan",
-      value: latestPlan
-        ? naira(latestPlan.totalIncome - latestPlan.totalAllocated)
-        : "No plan",
-      sub: latestPlan
-        ? `Progress: ${Math.round(progressPercent)}%`
-        : "Set a budget",
-      icon: Target,
-      borderColor: "border-purple-500",
-      bgColor: "bg-purple-50/40 dark:bg-purple-900/20",
-      iconColor: "bg-purple-500 text-white",
-      isPlan: true,
-    },
-    {
-      key: "trips",
-      label: "Active Trips",
-      value: activeTrips.length,
-      sub:
-        activeTrips.length > 0
-          ? `Next: ${activeTrips[0].origin} → ${activeTrips[0].destination}`
-          : "Plan a new adventure",
-      icon: MapPin,
-      borderColor: "border-amber-500",
-      bgColor: "bg-amber-50/40 dark:bg-amber-900/20",
-      iconColor: "bg-amber-500 text-white",
-    },
-  ];
+    return {
+      monthlySpend,
+      todaySpend,
+      monthlySales,
+      latestPlan,
+      planRemaining,
+      planColor,
+      progressPercent,
+      activeTrips,
+    };
+  }, [data, today, currentMonth]);
+
+  // Card configurations (memoized)
+  const cardConfigs = useMemo(
+    () => [
+      {
+        key: "spend",
+        label: "Monthly Spend",
+        value: naira(monthlySpend),
+        sub: `Today: ${naira(todaySpend)}`,
+        icon: ShoppingCart,
+        borderColor: "border-red-500",
+        bgColor: "bg-red-50/40 dark:bg-red-900/20",
+        iconColor: "bg-red-500 text-white",
+      },
+      {
+        key: "revenue",
+        label: "Business Revenue",
+        value: naira(monthlySales),
+        sub: `${data.generator?.businessEntries?.filter((e) => e.type === "sale" && e.date.startsWith(currentMonth)).length || 0} transactions`,
+        icon: Briefcase,
+        borderColor: "border-green-500",
+        bgColor: "bg-green-50/40 dark:bg-green-900/20",
+        iconColor: "bg-green-500 text-white",
+      },
+      {
+        key: "plan",
+        label: "Spending Plan",
+        value: latestPlan
+          ? naira(latestPlan.totalIncome - latestPlan.totalAllocated)
+          : "No plan",
+        sub: latestPlan
+          ? `Progress: ${Math.round(progressPercent)}%`
+          : "Set a budget",
+        icon: Target,
+        borderColor: "border-purple-500",
+        bgColor: "bg-purple-50/40 dark:bg-purple-900/20",
+        iconColor: "bg-purple-500 text-white",
+        isPlan: true,
+      },
+      {
+        key: "trips",
+        label: "Active Trips",
+        value: activeTrips.length,
+        sub:
+          activeTrips.length > 0
+            ? `Next: ${activeTrips[0].origin} → ${activeTrips[0].destination}`
+            : "Plan a new adventure",
+        icon: MapPin,
+        borderColor: "border-amber-500",
+        bgColor: "bg-amber-50/40 dark:bg-amber-900/20",
+        iconColor: "bg-amber-500 text-white",
+      },
+    ],
+    [
+      monthlySpend,
+      todaySpend,
+      monthlySales,
+      data,
+      currentMonth,
+      latestPlan,
+      progressPercent,
+      activeTrips,
+    ],
+  );
 
   return (
     <div className="space-y-6">
-      {/* 🚀 COMPACT HERO SECTION (Stats Merged Inside) */}
+      {/* 🚀 HERO SECTION (Compact) */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
         className="bg-gradient-to-br from-primary-600 to-primary-800 dark:from-primary-900 dark:to-gray-800 rounded-2xl p-5 sm:p-6 text-white relative overflow-hidden shadow-md"
       >
         <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2 blur-2xl pointer-events-none" />
 
-        <div className="relative z-10 flex flex-col gap-4">
-          {/* Top Row: Greeting + Plan Status */}
+        <div className="relative z-10 flex flex-col gap-3">
           <div className="flex justify-between items-start sm:items-center">
             <div>
               <p className="text-primary-100/80 text-xs font-medium uppercase tracking-wider">
@@ -163,7 +224,7 @@ export default function DashboardSummary() {
             </div>
             <div className="bg-black/20 backdrop-blur-sm rounded-xl px-3 py-2 text-right max-w-[140px] sm:max-w-full">
               <p className="text-[10px] text-white/70 uppercase tracking-wider leading-tight">
-                {latestPlan ? planStatusLabel : "Plan Status"}
+                {latestPlan ? "Plan Remaining" : "Plan Status"}
               </p>
               {latestPlan ? (
                 <p
@@ -206,21 +267,22 @@ export default function DashboardSummary() {
         </div>
       </motion.div>
 
-      {/* 🚀 4 MAIN CARDS ROW (Monthly Spend, Revenue, Plan, Trips) */}
+      {/* 🚀 4 MAIN CARDS ROW (with lighter animation) */}
       <motion.div
         variants={containerVariants}
         initial="hidden"
         animate="visible"
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
       >
-        {cardConfigs.map((card, idx) => {
+        {cardConfigs.map((card) => {
           const Icon = card.icon;
           return (
             <motion.div
               key={card.key}
               variants={itemVariants}
-              whileHover={{ scale: 1.03, y: -4 }}
-              className={`relative bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border-l-4 ${card.borderColor}`}
+              whileHover={{ scale: 1.02, y: -2 }}
+              transition={{ duration: 0.2 }}
+              className={`relative bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden border-l-4 ${card.borderColor}`}
             >
               <div
                 className={`absolute inset-0 ${card.bgColor} pointer-events-none`}
@@ -229,7 +291,7 @@ export default function DashboardSummary() {
               <div className="relative z-10 flex flex-col h-full">
                 <div className="flex items-center justify-between mb-3">
                   <div
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-md ${card.iconColor}`}
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm ${card.iconColor}`}
                   >
                     <Icon className="w-5 h-5" />
                   </div>
@@ -245,7 +307,6 @@ export default function DashboardSummary() {
                   {card.value}
                 </p>
 
-                {/* Progress bar for Plan card */}
                 {card.isPlan && latestPlan && (
                   <div className="mt-2">
                     <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mb-1">
@@ -268,15 +329,9 @@ export default function DashboardSummary() {
         })}
       </motion.div>
 
-      {/* 🚀 FINANCIAL SNAPSHOT (Additional Insights) */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
-        className="grid grid-cols-1 md:grid-cols-2 gap-4"
-      >
-        {/* Monthly Overview Breakdown */}
-        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-300">
+      {/* 🚀 FINANCIAL SNAPSHOT (No animations for faster load) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm">
           <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center gap-2 mb-3">
             <TrendingUp className="w-4 h-4 text-primary" /> Monthly Overview
           </h3>
@@ -310,33 +365,30 @@ export default function DashboardSummary() {
           </div>
         </div>
 
-        {/* Today's Activity */}
-        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-300">
+        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm">
           <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center gap-2 mb-3">
             <Calendar className="w-4 h-4 text-primary" /> Today's Activity
           </h3>
-          {todayLogs.length > 0 ? (
+          {todaySpend > 0 ? (
             <div className="space-y-2">
-              {todayLogs.slice(0, 3).map((log, idx) => (
-                <div
-                  key={idx}
-                  className="flex justify-between items-center py-1.5 border-b border-gray-50 dark:border-gray-700/50 last:border-0"
-                >
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
-                    {Object.keys(log.prices).length} items logged
-                  </span>
-                  <span className="text-sm font-semibold text-gray-800 dark:text-white">
-                    {naira(
-                      Object.values(log.prices).reduce((a, b) => a + b, 0),
-                    )}
-                  </span>
-                </div>
-              ))}
-              {todayLogs.length > 3 && (
-                <p className="text-xs text-gray-400 dark:text-gray-500 text-center pt-1">
-                  + {todayLogs.length - 3} more items
-                </p>
-              )}
+              {data.marketLogs
+                .filter((l) => l.date.split("T")[0] === today)
+                .slice(0, 3)
+                .map((log, idx) => (
+                  <div
+                    key={idx}
+                    className="flex justify-between items-center py-1.5 border-b border-gray-50 dark:border-gray-700/50 last:border-0"
+                  >
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      {Object.keys(log.prices).length} items logged
+                    </span>
+                    <span className="text-sm font-semibold text-gray-800 dark:text-white">
+                      {naira(
+                        Object.values(log.prices).reduce((a, b) => a + b, 0),
+                      )}
+                    </span>
+                  </div>
+                ))}
             </div>
           ) : (
             <p className="text-sm text-gray-400 dark:text-gray-500 py-2">
@@ -344,7 +396,7 @@ export default function DashboardSummary() {
             </p>
           )}
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }
