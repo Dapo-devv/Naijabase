@@ -86,11 +86,12 @@ export default function Navbar() {
               <Link to="/trip" className={`${linkBase} ${isActive("/trip")}`}>
                 Trip
               </Link>
+              {/* 🚀 UPDATED: Salary → Plan Income */}
               <Link
                 to="/savings"
                 className={`${linkBase} ${isActive("/savings")}`}
               >
-                Salary
+                Plan Income
               </Link>
               <Link to="/blog" className={`${linkBase} ${isActive("/blog")}`}>
                 Blog
@@ -185,7 +186,7 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* --- MOBILE SIDEBAR MENU (Links) --- */}
+      {/* --- MOBILE SIDEBAR MENU --- */}
       {mobileMenuOpen && loggedIn && (
         <div className="md:hidden bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-lg absolute top-16 left-0 w-full z-40 p-4 flex flex-col gap-2 animate-fade-in">
           <Link
@@ -216,12 +217,13 @@ export default function Navbar() {
           >
             Trip
           </Link>
+          {/* 🚀 UPDATED: Salary → Plan Income */}
           <Link
             to="/savings"
             className={`${linkBase} ${isActive("/savings")}`}
             onClick={() => setMobileMenuOpen(false)}
           >
-            Salary
+            Plan Income
           </Link>
           <Link
             to="/blog"

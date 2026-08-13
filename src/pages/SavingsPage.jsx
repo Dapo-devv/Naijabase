@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Wallet,
   Calendar,
@@ -6,54 +6,41 @@ import {
   Eye,
   X,
   CheckCircle2,
-  Briefcase,
-  Banknote,
+  Target,
+  Plus,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { useNaijaBase } from "../context/NaijaBaseContext";
 import { todayISO, formatDate, naira } from "../utils/constants";
 
-const EXPENSE_CATEGORIES = [
-  "Rent",
-  "Transport",
-  "Food & Groceries",
-  "Utilities (Light/Water)",
-  "Data & Internet",
-  "Entertainment",
-  "Health",
-  "Insurance",
-  "Education",
-  "Other",
-];
-
 export default function SavingsPage() {
   const { currentUser, updateUserData } = useNaijaBase();
   const data = currentUser?.data;
 
-  const salaryLogs = Array.isArray(data?.salaryLogs) ? data.salaryLogs : [];
+  // 🚀 Scroll to top on mount
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
 
-  const [activeTab, setActiveTab] = useState("income");
-  const [viewingEntry, setViewingEntry] = useState(null);
+  const spendingPlans = Array.isArray(data?.generator?.spendingPlans)
+    ? data.generator.spendingPlans
+    : [];
+
+  const [viewingPlan, setViewingPlan] = useState(null);
   const [toast, setToast] = useState(null);
-  const [monthYear, setMonthYear] = useState(todayISO().slice(0, 7));
 
-  // Form states
-  const [incomeAmount, setIncomeAmount] = useState("");
-  const [savingsInvested, setSavingsInvested] = useState("");
-  const [incomeExpenses, setIncomeExpenses] = useState(
-    EXPENSE_CATEGORIES.map((cat) => ({ category: cat, amount: 0 })),
-  );
-
-  const [grossSalary, setGrossSalary] = useState("");
-  const [payeDeduction, setPayeDeduction] = useState("");
-  const [pensionDeduction, setPensionDeduction] = useState("");
-  const [otherDeductions, setOtherDeductions] = useState("");
-  const [bonuses, setBonuses] = useState("");
-  const [salaryExpenses, setSalaryExpenses] = useState(
-    EXPENSE_CATEGORIES.map((cat) => ({ category: cat, amount: 0 })),
-  );
-
+  const [planIncome, setPlanIncome] = useState("");
+  const [planItems, setPlanItems] = useState([
+    { id: 1, name: "Rent", amount: 0 },
+    { id: 2, name: "Groceries", amount: 0 },
+    { id: 3, name: "Travel", amount: 0 },
+    { id: 4, name: "Dining Out", amount: 0 },
+    { id: 5, name: "Clothing", amount: 0 },
+    { id: 6, name: "Subscriptions", amount: 0 },
+    { id: 7, name: "Miscellaneous", amount: 0 },
+  ]);
+  const [planCustomName, setPlanCustomName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
   const showToast = (message) => {
@@ -61,145 +48,91 @@ export default function SavingsPage() {
     setTimeout(() => setToast(null), 2500);
   };
 
-  const calculateTotalExpenses = (expenseArray) => {
-    return expenseArray.reduce(
-      (sum, exp) => sum + (parseFloat(exp.amount) || 0),
-      0,
-    );
-  };
-
-  const handleExpenseChange = (setList, index, value) => {
-    setList((prev) =>
-      prev.map((item, i) =>
-        i === index ? { ...item, amount: parseFloat(value) || 0 } : item,
+  const handlePlanAmountChange = (id, value) => {
+    setPlanItems((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, amount: parseFloat(value) || 0 } : item,
       ),
     );
   };
 
-  const resetForm = () => {
-    setMonthYear(todayISO().slice(0, 7));
-    setIncomeAmount("");
-    setSavingsInvested("");
-    setIncomeExpenses(
-      EXPENSE_CATEGORIES.map((cat) => ({ category: cat, amount: 0 })),
-    );
-    setGrossSalary("");
-    setPayeDeduction("");
-    setPensionDeduction("");
-    setOtherDeductions("");
-    setBonuses("");
-    setSalaryExpenses(
-      EXPENSE_CATEGORIES.map((cat) => ({ category: cat, amount: 0 })),
-    );
+  const handleRemovePlanItem = (id) => {
+    if (planItems.length <= 1) return;
+    setPlanItems((prev) => prev.filter((item) => item.id !== id));
   };
 
-  const handleSaveIncome = async () => {
-    const income = parseFloat(incomeAmount);
-    if (!income || income <= 0) {
-      alert("Please enter your total income for the month.");
-      return;
-    }
-    setIsSaving(true);
-    await new Promise((resolve) => setTimeout(resolve, 500)); // simulate async
-
-    const saved = parseFloat(savingsInvested) || 0;
-    const totalExpenses = calculateTotalExpenses(incomeExpenses);
-
-    const newLog = {
-      id: Date.now(),
-      month: monthYear,
-      type: "income",
-      income: income,
-      savingsInvested: saved,
-      expenses: incomeExpenses.filter((e) => e.amount > 0),
-      totalExpenses: totalExpenses,
-      balanceLeft: income - totalExpenses - saved,
-      createdAt: new Date().toISOString(),
-    };
-
-    updateUserData((d) => {
-      const existingLogs = Array.isArray(d.salaryLogs) ? d.salaryLogs : [];
-      return { ...d, salaryLogs: [...existingLogs, newLog] };
-    });
-
-    setIsSaving(false);
-    showToast("✅ Income logged successfully!");
-    resetForm();
+  const handleAddCustomPlanItem = () => {
+    const trimmed = planCustomName.trim();
+    if (!trimmed) return;
+    setPlanItems((prev) => [
+      ...prev,
+      { id: Date.now(), name: trimmed, amount: 0 },
+    ]);
+    setPlanCustomName("");
   };
 
-  const handleSaveSalary = async () => {
-    const gross = parseFloat(grossSalary);
-    if (!gross || gross <= 0) {
-      alert("Please enter your gross salary.");
+  const resetPlanForm = () => {
+    setPlanIncome("");
+    setPlanItems([
+      { id: 1, name: "Rent", amount: 0 },
+      { id: 2, name: "Groceries", amount: 0 },
+      { id: 3, name: "Travel", amount: 0 },
+      { id: 4, name: "Dining Out", amount: 0 },
+      { id: 5, name: "Clothing", amount: 0 },
+      { id: 6, name: "Subscriptions", amount: 0 },
+      { id: 7, name: "Miscellaneous", amount: 0 },
+    ]);
+    setPlanCustomName("");
+  };
+
+  const handleSavePlan = async () => {
+    const totalIncome = parseFloat(planIncome);
+    if (!totalIncome || totalIncome <= 0) {
+      alert("Please enter a valid total income for this plan.");
       return;
     }
     setIsSaving(true);
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    const paye = parseFloat(payeDeduction) || 0;
-    const pension = parseFloat(pensionDeduction) || 0;
-    const other = parseFloat(otherDeductions) || 0;
-    const bonus = parseFloat(bonuses) || 0;
-    const totalExpenses = calculateTotalExpenses(salaryExpenses);
-
-    const netSalary = gross - paye - pension - other + bonus;
-    const balanceLeft = netSalary - totalExpenses;
-
-    const newLog = {
+    const newPlan = {
       id: Date.now(),
-      month: monthYear,
-      type: "salary",
-      grossSalary: gross,
-      payeDeduction: paye,
-      pensionDeduction: pension,
-      otherDeductions: other,
-      bonuses: bonus,
-      netSalary: netSalary,
-      expenses: salaryExpenses.filter((e) => e.amount > 0),
-      totalExpenses: totalExpenses,
-      balanceLeft: balanceLeft,
-      createdAt: new Date().toISOString(),
+      date: todayISO(),
+      totalIncome: totalIncome,
+      items: planItems.filter((i) => i.amount > 0),
+      totalAllocated: planItems.reduce((sum, i) => sum + (i.amount || 0), 0),
     };
 
-    updateUserData((d) => {
-      const existingLogs = Array.isArray(d.salaryLogs) ? d.salaryLogs : [];
-      return { ...d, salaryLogs: [...existingLogs, newLog] };
-    });
-
-    setIsSaving(false);
-    showToast("✅ Salary logged successfully!");
-    resetForm();
-  };
-
-  const handleDelete = (id) => {
-    if (!window.confirm("Delete this record?")) return;
     updateUserData((d) => ({
       ...d,
-      salaryLogs: (d.salaryLogs || []).filter((l) => l.id !== id),
+      generator: {
+        ...d.generator,
+        spendingPlans: [...(d.generator.spendingPlans || []), newPlan],
+      },
     }));
-    setViewingEntry(null);
-    showToast("🗑️ Record deleted");
+
+    setIsSaving(false);
+    resetPlanForm();
+    showToast("✅ Spending plan saved!");
   };
 
-  const monthKeys = useMemo(() => {
-    const months = salaryLogs.map((log) => log.month);
-    return [...new Set(months)].sort((a, b) => b.localeCompare(a));
-  }, [salaryLogs]);
+  const handleDeletePlan = (id) => {
+    if (!window.confirm("Delete this spending plan?")) return;
+    updateUserData((d) => ({
+      ...d,
+      generator: {
+        ...d.generator,
+        spendingPlans: (d.generator.spendingPlans || []).filter(
+          (p) => p.id !== id,
+        ),
+      },
+    }));
+    setViewingPlan(null);
+    showToast("🗑️ Plan deleted");
+  };
 
-  const previewIncome = parseFloat(incomeAmount) || 0;
-  const previewIncomeExpenses = calculateTotalExpenses(incomeExpenses);
-  const previewIncomeBalance =
-    previewIncome - previewIncomeExpenses - (parseFloat(savingsInvested) || 0);
-
-  const previewGross = parseFloat(grossSalary) || 0;
-  const previewDeductions =
-    (parseFloat(payeDeduction) || 0) +
-    (parseFloat(pensionDeduction) || 0) +
-    (parseFloat(otherDeductions) || 0);
-  const previewNet =
-    previewGross - previewDeductions + (parseFloat(bonuses) || 0);
-  const previewSalaryExpenses = calculateTotalExpenses(salaryExpenses);
-  const previewSalaryBalance = previewNet - previewSalaryExpenses;
+  const totalIncome = parseFloat(planIncome) || 0;
+  const totalAllocated = planItems.reduce((sum, i) => sum + (i.amount || 0), 0);
+  const remaining = totalIncome - totalAllocated;
 
   return (
     <motion.div
@@ -226,414 +159,179 @@ export default function SavingsPage() {
       <div>
         <h1 className="text-2xl font-extrabold text-neutral-text dark:text-white flex items-center gap-2">
           <Wallet className="w-6 h-6 text-primary dark:text-primary-400" />{" "}
-          Monthly Ledger
+          Spending Plan
         </h1>
         <p className="text-sm text-gray-500 dark:text-gray-400">
-          Professional income & salary tracking with real-time balance
-          calculation.
+          Plan your income and allocate every Naira to expenses, savings, and
+          goals.
         </p>
       </div>
 
-      {/* Tabs */}
-      <motion.div
-        className="flex gap-2 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl mb-6"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-      >
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => setActiveTab("income")}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all ${
-            activeTab === "income"
-              ? "bg-white dark:bg-gray-700 shadow text-primary dark:text-primary-400"
-              : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-          }`}
-        >
-          <Banknote className="w-4 h-4" /> Personal Income
-        </motion.button>
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => setActiveTab("salary")}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all ${
-            activeTab === "salary"
-              ? "bg-white dark:bg-gray-700 shadow text-primary dark:text-primary-400"
-              : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-          }`}
-        >
-          <Briefcase className="w-4 h-4" /> Salary (Job)
-        </motion.button>
-      </motion.div>
-
-      {/* Form */}
+      {/* --- Plan Form --- */}
       <motion.div
         className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-6 transition-all duration-300"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
       >
+        <div className="flex items-center gap-2 mb-4">
+          <Target className="w-5 h-5 text-primary" />
+          <h2 className="text-lg font-bold text-gray-800 dark:text-white">
+            Create a Spending Plan
+          </h2>
+        </div>
+
         <div className="mb-6">
-          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 block">
-            Month
+          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
+            Total Income for this Plan (₦)
           </label>
-          <div className="relative w-full max-w-full sm:max-w-[200px]">
-            <div className="flex items-center w-full px-4 py-2 bg-gray-100 dark:bg-gray-700/50 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600/50 transition-colors cursor-pointer group">
-              <Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400 mr-2 flex-shrink-0" />
-              <input
-                type="month"
-                value={monthYear}
-                onChange={(e) => setMonthYear(e.target.value)}
-                className="w-full bg-transparent border-none text-gray-800 dark:text-gray-200 focus:outline-none cursor-pointer text-base font-medium placeholder-gray-400"
-              />
-            </div>
+          <input
+            type="number"
+            inputMode="numeric"
+            value={planIncome}
+            onChange={(e) => setPlanIncome(e.target.value)}
+            placeholder="e.g. 100000"
+            className="w-full max-w-xs px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+          />
+        </div>
+
+        <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+          <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">
+            Planned Expenses
+          </h3>
+          <motion.div
+            className="space-y-3"
+            initial="hidden"
+            animate="visible"
+            variants={{
+              hidden: { opacity: 0 },
+              visible: { opacity: 1, transition: { staggerChildren: 0.05 } },
+            }}
+          >
+            {planItems.map((item) => (
+              <motion.div
+                key={item.id}
+                variants={{
+                  hidden: { opacity: 0, x: -10 },
+                  visible: { opacity: 1, x: 0 },
+                }}
+                className="flex items-center gap-2 bg-gray-50 dark:bg-gray-700/30 rounded-xl p-2.5"
+              >
+                <span className="flex-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {item.name}
+                </span>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 text-sm">
+                    ₦
+                  </span>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={item.amount || ""}
+                    onChange={(e) =>
+                      handlePlanAmountChange(item.id, e.target.value)
+                    }
+                    placeholder="0"
+                    className="w-32 pl-7 pr-2 py-2 text-sm text-right border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                  />
+                </div>
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => handleRemovePlanItem(item.id)}
+                  className="w-8 h-8 flex items-center justify-center text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </motion.button>
+              </motion.div>
+            ))}
+          </motion.div>
+
+          <div className="flex gap-2 mt-4">
+            <input
+              type="text"
+              value={planCustomName}
+              onChange={(e) => setPlanCustomName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleAddCustomPlanItem()}
+              placeholder="Add custom expense..."
+              className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+            />
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleAddCustomPlanItem}
+              className="px-4 py-2 text-sm font-medium bg-primary text-white dark:text-white rounded-lg hover:bg-primary-600 dark:hover:bg-primary-500 transition-colors flex items-center gap-1"
+            >
+              <Plus className="w-4 h-4" /> Add
+            </motion.button>
           </div>
         </div>
 
-        {activeTab === "income" && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.2 }}
-            className="space-y-6"
-          >
-            {/* ... summary bar ... unchanged */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-gray-200 dark:border-gray-600">
-              <div className="text-center">
-                <p className="text-[10px] text-green-600 dark:text-green-400 uppercase font-bold">
-                  Income
-                </p>
-                <p className="text-xl font-bold text-green-600 dark:text-green-400">
-                  {naira(previewIncome)}
-                </p>
-              </div>
-              <div className="text-center">
-                <p className="text-[10px] text-red-500 dark:text-red-400 uppercase font-bold">
-                  Expenses
-                </p>
-                <p className="text-xl font-bold text-red-500 dark:text-red-400">
-                  {naira(previewIncomeExpenses)}
-                </p>
-              </div>
-              <div className="text-center">
-                <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-bold">
-                  Balance
-                </p>
-                <p
-                  className={`text-xl font-bold ${
-                    previewIncomeBalance >= 0
-                      ? "text-primary dark:text-primary-400"
-                      : "text-red-600 dark:text-red-400"
-                  }`}
-                >
-                  {naira(previewIncomeBalance)}
-                </p>
-              </div>
+        <div className="flex flex-col sm:flex-row items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-4 mt-4 gap-4">
+          <div className="flex flex-wrap gap-6">
+            <div>
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                Total Income
+              </p>
+              <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                {naira(totalIncome)}
+              </p>
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
-                  Total Monthly Income (₦)
-                </label>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  value={incomeAmount}
-                  onChange={(e) => setIncomeAmount(e.target.value)}
-                  placeholder="e.g. 150000"
-                  className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
-                  Savings & Investments (₦)
-                </label>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  value={savingsInvested}
-                  onChange={(e) => setSavingsInvested(e.target.value)}
-                  placeholder="How much did you save or invest?"
-                  className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
-                />
-              </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                Allocated
+              </p>
+              <p className="text-lg font-bold text-red-500 dark:text-red-400">
+                {naira(totalAllocated)}
+              </p>
             </div>
-
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-              <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">
-                Expenses Breakdown
-              </h3>
-              <motion.div
-                className="grid grid-cols-1 sm:grid-cols-2 gap-3"
-                variants={{
-                  hidden: { opacity: 0 },
-                  visible: {
-                    opacity: 1,
-                    transition: { staggerChildren: 0.05 },
-                  },
-                }}
-                initial="hidden"
-                animate="visible"
+            <div>
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                Remaining
+              </p>
+              <p
+                className={`text-lg font-bold ${
+                  remaining >= 0
+                    ? "text-primary dark:text-primary-400"
+                    : "text-red-600 dark:text-red-400"
+                }`}
               >
-                {incomeExpenses.map((exp, index) => (
-                  <motion.div
-                    key={index}
-                    variants={{
-                      hidden: { opacity: 0, x: -10 },
-                      visible: { opacity: 1, x: 0 },
-                    }}
-                    className="flex items-center gap-2 bg-gray-50 dark:bg-gray-700/30 rounded-lg px-3 py-2 border border-gray-100 dark:border-gray-600"
-                  >
-                    <span className="flex-1 text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
-                      {exp.category}
-                    </span>
-                    <div className="relative">
-                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 text-xs">
-                        ₦
-                      </span>
-                      <input
-                        type="number"
-                        inputMode="numeric"
-                        value={exp.amount || ""}
-                        onChange={(e) =>
-                          handleExpenseChange(
-                            setIncomeExpenses,
-                            index,
-                            e.target.value,
-                          )
-                        }
-                        placeholder="0"
-                        className="w-24 pl-5 pr-2 py-1 text-sm text-right bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-1 focus:ring-primary/30 text-gray-800 dark:text-gray-200"
-                      />
-                    </div>
-                  </motion.div>
-                ))}
-              </motion.div>
+                {naira(remaining)}
+              </p>
             </div>
-
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleSaveIncome}
-              disabled={isSaving}
-              className="mt-4 w-full flex items-center justify-center gap-2 py-3 bg-primary text-white dark:text-white font-semibold rounded-xl hover:bg-primary-600 dark:hover:bg-primary-500 transition-colors shadow-md disabled:opacity-70"
-            >
-              {isSaving ? (
-                <LoadingSpinner size={20} color="text-white" />
-              ) : (
-                <CheckCircle2 className="w-5 h-5" />
-              )}
-              {isSaving ? "Saving..." : "Log Income & Expenses"}
-            </motion.button>
-          </motion.div>
-        )}
-
-        {activeTab === "salary" && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.2 }}
-            className="space-y-6"
+          </div>
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={handleSavePlan}
+            disabled={isSaving}
+            className="flex items-center justify-center gap-2 py-3 px-6 bg-primary text-white dark:text-white font-semibold rounded-xl hover:bg-primary-600 dark:hover:bg-primary-500 transition-colors disabled:opacity-70"
           >
-            {/* ... similar summary and fields ... */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-gray-200 dark:border-gray-600">
-              <div className="text-center">
-                <p className="text-[10px] text-blue-600 dark:text-blue-400 uppercase font-bold">
-                  Gross
-                </p>
-                <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
-                  {naira(previewGross)}
-                </p>
-              </div>
-              <div className="text-center">
-                <p className="text-[10px] text-red-500 dark:text-red-400 uppercase font-bold">
-                  Deductions
-                </p>
-                <p className="text-xl font-bold text-red-500 dark:text-red-400">
-                  {naira(previewDeductions)}
-                </p>
-              </div>
-              <div className="text-center">
-                <p className="text-[10px] text-green-600 dark:text-green-400 uppercase font-bold">
-                  Net Pay
-                </p>
-                <p className="text-xl font-bold text-green-600 dark:text-green-400">
-                  {naira(previewNet)}
-                </p>
-              </div>
-              <div className="text-center">
-                <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-bold">
-                  Balance
-                </p>
-                <p
-                  className={`text-xl font-bold ${
-                    previewSalaryBalance >= 0
-                      ? "text-primary dark:text-primary-400"
-                      : "text-red-600 dark:text-red-400"
-                  }`}
-                >
-                  {naira(previewSalaryBalance)}
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
-                  Gross Salary (₦)
-                </label>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  value={grossSalary}
-                  onChange={(e) => setGrossSalary(e.target.value)}
-                  placeholder="e.g. 200000"
-                  className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
-                  Bonuses & Allowances (₦)
-                </label>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  value={bonuses}
-                  onChange={(e) => setBonuses(e.target.value)}
-                  placeholder="e.g. 50000"
-                  className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
-                  PAYE / Tax (₦)
-                </label>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  value={payeDeduction}
-                  onChange={(e) => setPayeDeduction(e.target.value)}
-                  placeholder="Tax deducted"
-                  className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
-                  Pension (₦)
-                </label>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  value={pensionDeduction}
-                  onChange={(e) => setPensionDeduction(e.target.value)}
-                  placeholder="Pension contribution"
-                  className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
-                  Other Deductions (₦)
-                </label>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  value={otherDeductions}
-                  onChange={(e) => setOtherDeductions(e.target.value)}
-                  placeholder="Union dues, loans, etc."
-                  className="w-full px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
-                />
-              </div>
-            </div>
-
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-              <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">
-                Expenses Breakdown
-              </h3>
-              <motion.div
-                className="grid grid-cols-1 sm:grid-cols-2 gap-3"
-                variants={{
-                  hidden: { opacity: 0 },
-                  visible: {
-                    opacity: 1,
-                    transition: { staggerChildren: 0.05 },
-                  },
-                }}
-                initial="hidden"
-                animate="visible"
-              >
-                {salaryExpenses.map((exp, index) => (
-                  <motion.div
-                    key={index}
-                    variants={{
-                      hidden: { opacity: 0, x: -10 },
-                      visible: { opacity: 1, x: 0 },
-                    }}
-                    className="flex items-center gap-2 bg-gray-50 dark:bg-gray-700/30 rounded-lg px-3 py-2 border border-gray-100 dark:border-gray-600"
-                  >
-                    <span className="flex-1 text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
-                      {exp.category}
-                    </span>
-                    <div className="relative">
-                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 text-xs">
-                        ₦
-                      </span>
-                      <input
-                        type="number"
-                        inputMode="numeric"
-                        value={exp.amount || ""}
-                        onChange={(e) =>
-                          handleExpenseChange(
-                            setSalaryExpenses,
-                            index,
-                            e.target.value,
-                          )
-                        }
-                        placeholder="0"
-                        className="w-24 pl-5 pr-2 py-1 text-sm text-right bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-1 focus:ring-primary/30 text-gray-800 dark:text-gray-200"
-                      />
-                    </div>
-                  </motion.div>
-                ))}
-              </motion.div>
-            </div>
-
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleSaveSalary}
-              disabled={isSaving}
-              className="mt-4 w-full flex items-center justify-center gap-2 py-3 bg-primary text-white dark:text-white font-semibold rounded-xl hover:bg-primary-600 dark:hover:bg-primary-500 transition-colors shadow-md disabled:opacity-70"
-            >
-              {isSaving ? (
-                <LoadingSpinner size={20} color="text-white" />
-              ) : (
-                <CheckCircle2 className="w-5 h-5" />
-              )}
-              {isSaving ? "Saving..." : "Log Salary & Expenses"}
-            </motion.button>
-          </motion.div>
-        )}
+            {isSaving ? (
+              <LoadingSpinner size={20} color="text-white" />
+            ) : (
+              <CheckCircle2 className="w-5 h-5" />
+            )}
+            {isSaving ? "Saving..." : "Save Plan"}
+          </motion.button>
+        </div>
       </motion.div>
 
-      {/* History */}
+      {/* --- History --- */}
       <div>
         <h2 className="text-lg font-bold text-neutral-text dark:text-white flex items-center gap-2 mb-4">
           <Calendar className="w-5 h-5 text-primary dark:text-primary-400" />{" "}
-          History
+          Your Spending Plans
         </h2>
 
-        {salaryLogs.length === 0 ? (
+        {spendingPlans.length === 0 ? (
           <div className="bg-gray-50 dark:bg-gray-800/40 rounded-xl p-8 text-center text-gray-400 dark:text-gray-500 border border-dashed dark:border-gray-700">
             <p className="text-sm">
-              No records yet. Log your first month above!
+              No plans yet. Create your first plan above!
             </p>
           </div>
         ) : (
           <motion.div
-            className="space-y-4"
+            className="space-y-3"
             initial="hidden"
             animate="visible"
             variants={{
@@ -641,57 +339,32 @@ export default function SavingsPage() {
               visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
             }}
           >
-            {monthKeys.map((month) => {
-              const monthLogs = salaryLogs
-                .filter((l) => l.month === month)
-                .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-              const latest = monthLogs[0];
-
-              const isIncome = latest.type === "income";
-              const displayIncome = isIncome
-                ? latest.income
-                : latest.netSalary || latest.grossSalary;
-              const displayExpenses = latest.totalExpenses || 0;
-              const displayBalance = latest.balanceLeft || 0;
-
-              return (
+            {spendingPlans
+              .sort((a, b) => b.date.localeCompare(a.date))
+              .map((plan) => (
                 <motion.div
-                  key={month}
+                  key={plan.id}
                   variants={{
                     hidden: { opacity: 0, y: 10 },
                     visible: { opacity: 1, y: 0 },
                   }}
                   className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4 shadow-sm hover:shadow-md transition-shadow"
                 >
-                  {/* ... content same as before ... */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                     <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-neutral-text dark:text-white">
-                          {new Date(month + "-01").toLocaleDateString("en-NG", {
-                            month: "long",
-                            year: "numeric",
-                          })}
-                        </h3>
-                        <span
-                          className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                            isIncome
-                              ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
-                              : "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
-                          }`}
-                        >
-                          {isIncome ? "Income" : "Salary"}
-                        </span>
-                      </div>
+                      <p className="font-semibold text-neutral-text dark:text-white">
+                        Plan from {formatDate(plan.date)}
+                      </p>
                       <p className="text-xs text-gray-400 dark:text-gray-500">
-                        Logged on {formatDate(latest.createdAt)}
+                        Income: {naira(plan.totalIncome)} · Allocated:{" "}
+                        {naira(plan.totalAllocated)}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
                       <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        onClick={() => setViewingEntry(latest)}
+                        onClick={() => setViewingPlan(plan)}
                         className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-lg transition-colors"
                       >
                         <Eye className="w-3.5 h-3.5" /> View
@@ -699,64 +372,42 @@ export default function SavingsPage() {
                       <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        onClick={() => handleDelete(latest.id)}
+                        onClick={() => handleDeletePlan(plan.id)}
                         className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-lg transition-colors"
                       >
                         <Trash2 className="w-3.5 h-3.5" /> Delete
                       </motion.button>
                     </div>
                   </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
-                    <div className="bg-green-50/60 dark:bg-green-900/20 rounded-lg p-2 text-center">
-                      <p className="text-[10px] text-green-700 dark:text-green-400 uppercase font-semibold">
-                        {isIncome ? "Income" : "Net Pay"}
-                      </p>
-                      <p className="font-bold text-green-600 dark:text-green-400 text-sm">
-                        {naira(displayIncome)}
-                      </p>
-                    </div>
-                    <div className="bg-red-50/60 dark:bg-red-900/20 rounded-lg p-2 text-center">
-                      <p className="text-[10px] text-red-700 dark:text-red-400 uppercase font-semibold">
-                        Spent
-                      </p>
-                      <p className="font-bold text-red-600 dark:text-red-400 text-sm">
-                        {naira(displayExpenses)}
-                      </p>
-                    </div>
-                    <div className="bg-yellow-50/60 dark:bg-yellow-900/20 rounded-lg p-2 text-center">
-                      <p className="text-[10px] text-yellow-700 dark:text-yellow-400 uppercase font-semibold">
-                        Saved
-                      </p>
-                      <p className="font-bold text-yellow-600 dark:text-yellow-400 text-sm">
-                        {naira(displayIncome - displayExpenses)}
-                      </p>
-                    </div>
-                    <div
-                      className={`${
-                        displayBalance >= 0
-                          ? "bg-primary-50/60 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400"
-                          : "bg-red-50/60 dark:bg-red-900/20 text-red-600 dark:text-red-400"
-                      } rounded-lg p-2 text-center`}
-                    >
-                      <p className="text-[10px] font-semibold uppercase">
-                        Balance
-                      </p>
-                      <p className="font-bold text-sm">
-                        {naira(displayBalance)}
-                      </p>
+                  <div className="border-t border-gray-100 dark:border-gray-700 pt-2">
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+                      Allocation Breakdown
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {plan.items.map((item, idx) => (
+                        <div
+                          key={idx}
+                          className="bg-gray-50 dark:bg-gray-700/30 rounded-lg p-2 text-center"
+                        >
+                          <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
+                            {item.name}
+                          </p>
+                          <p className="text-sm font-bold text-primary dark:text-primary-400">
+                            {naira(item.amount)}
+                          </p>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </motion.div>
-              );
-            })}
+              ))}
           </motion.div>
         )}
       </div>
 
       {/* View Modal */}
       <AnimatePresence>
-        {viewingEntry && (
+        {viewingPlan && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -770,43 +421,97 @@ export default function SavingsPage() {
               transition={{ type: "spring", damping: 20 }}
               className="bg-white dark:bg-gray-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700"
             >
-              {/* ... modal content same as before ... */}
               <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-700">
                 <h3 className="text-lg font-bold text-neutral-text dark:text-white">
-                  {viewingEntry.type === "income"
-                    ? "Income Breakdown"
-                    : "Salary Breakdown"}
+                  Spending Plan Details
                 </h3>
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
-                  onClick={() => setViewingEntry(null)}
+                  onClick={() => setViewingPlan(null)}
                   className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                 >
                   <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                 </motion.button>
               </div>
               <div className="p-5 space-y-3">
-                {/* ... details ... */}
                 <div className="bg-primary-50 dark:bg-primary-900/30 rounded-xl p-3 text-center">
                   <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                    {viewingEntry.type === "income" ? "Income" : "Salary"} ·
-                    Month
+                    Plan Date
                   </p>
                   <p className="font-bold text-neutral-text dark:text-white">
-                    {new Date(viewingEntry.month + "-01").toLocaleDateString(
-                      "en-NG",
-                      { month: "long", year: "numeric" },
-                    )}
+                    {formatDate(viewingPlan.date)}
                   </p>
                 </div>
-                {/* ... more details ... */}
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-3 text-center">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                      Income
+                    </p>
+                    <p className="font-bold text-green-600 dark:text-green-400 text-lg">
+                      {naira(viewingPlan.totalIncome)}
+                    </p>
+                  </div>
+                  <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-3 text-center">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                      Allocated
+                    </p>
+                    <p className="font-bold text-red-600 dark:text-red-400 text-lg">
+                      {naira(viewingPlan.totalAllocated)}
+                    </p>
+                  </div>
+                  <div
+                    className={`${
+                      viewingPlan.totalIncome - viewingPlan.totalAllocated >= 0
+                        ? "bg-primary-50 dark:bg-primary-900/30"
+                        : "bg-red-50 dark:bg-red-900/30"
+                    } rounded-xl p-3 text-center`}
+                  >
+                    <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                      Remaining
+                    </p>
+                    <p
+                      className={`font-bold text-lg ${
+                        viewingPlan.totalIncome - viewingPlan.totalAllocated >=
+                        0
+                          ? "text-primary dark:text-primary-400"
+                          : "text-red-600 dark:text-red-400"
+                      }`}
+                    >
+                      {naira(
+                        viewingPlan.totalIncome - viewingPlan.totalAllocated,
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="border-t border-gray-100 dark:border-gray-700 pt-3">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                    Expense Breakdown
+                  </p>
+                  <div className="space-y-1.5">
+                    {viewingPlan.items.map((item, idx) => (
+                      <div
+                        key={idx}
+                        className="flex justify-between text-sm py-1 border-b border-gray-50 dark:border-gray-700/50 last:border-0"
+                      >
+                        <span className="text-gray-700 dark:text-gray-300">
+                          {item.name}
+                        </span>
+                        <span className="font-medium text-gray-900 dark:text-white">
+                          {naira(item.amount)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
               <div className="p-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 text-center">
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => setViewingEntry(null)}
+                  onClick={() => setViewingPlan(null)}
                   className="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                 >
                   Close

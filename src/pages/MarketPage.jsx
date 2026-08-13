@@ -41,6 +41,11 @@ export default function MarketPage() {
   const justSavedRef = useRef(false);
   const hasLoadedRef = useRef(false);
 
+  // 🚀 Scroll to top on mount
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
+
   if (!data) return null;
 
   useEffect(() => {

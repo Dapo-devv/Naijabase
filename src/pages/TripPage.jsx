@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   MapPin,
   Save,
@@ -20,6 +20,11 @@ import LoadingSpinner from "../components/LoadingSpinner";
 export default function TripPage() {
   const { currentUser, updateUserData } = useNaijaBase();
   const data = currentUser?.data;
+
+  // 🚀 Scroll to top on mount
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
 
   const [editingTripId, setEditingTripId] = useState(null);
   const [viewingTrip, setViewingTrip] = useState(null);
