@@ -25,7 +25,6 @@ const itemVariants = {
   visible: { opacity: 1, y: 0 },
 };
 
-// Skeleton loader component
 const SkeletonCard = () => (
   <div className="bg-gray-100 dark:bg-gray-700/50 rounded-2xl p-5 animate-pulse border-l-4 border-gray-300 dark:border-gray-600">
     <div className="flex items-center justify-between mb-3">
@@ -42,33 +41,10 @@ export default function DashboardSummary() {
   const { currentUser } = useNaijaBase();
   const data = currentUser?.data;
 
-  // Show skeleton while data is loading
-  if (!data) {
-    return (
-      <div className="space-y-6">
-        {/* Hero skeleton */}
-        <div className="bg-gradient-to-br from-gray-300 to-gray-400 dark:from-gray-700 dark:to-gray-800 rounded-2xl p-5 sm:p-6 h-32 animate-pulse" />
-
-        {/* 4 cards skeleton */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <SkeletonCard key={i} />
-          ))}
-        </div>
-
-        {/* 2-column snapshot skeleton */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-white/80 dark:bg-gray-800/80 rounded-2xl p-5 h-32 animate-pulse" />
-          <div className="bg-white/80 dark:bg-gray-800/80 rounded-2xl p-5 h-32 animate-pulse" />
-        </div>
-      </div>
-    );
-  }
-
+  // --- ALL HOOKS DECLARED AT THE TOP (FIXES HOOK ORDER ERROR) ---
   const today = todayISO();
   const currentMonth = today.slice(0, 7);
 
-  // --- Memoized Calculations ---
   const {
     monthlySpend,
     todaySpend,
@@ -79,7 +55,20 @@ export default function DashboardSummary() {
     progressPercent,
     activeTrips,
   } = useMemo(() => {
-    // Market (Expenses)
+    // Default safe values if data is missing
+    if (!data) {
+      return {
+        monthlySpend: 0,
+        todaySpend: 0,
+        monthlySales: 0,
+        latestPlan: null,
+        planRemaining: null,
+        planColor: "text-green-300",
+        progressPercent: 0,
+        activeTrips: [],
+      };
+    }
+
     const monthlySpend = data.marketLogs
       .filter((l) => l.date.startsWith(currentMonth))
       .reduce(
@@ -97,19 +86,18 @@ export default function DashboardSummary() {
       0,
     );
 
-    // Finance (Business)
     const businessEntries = data.generator?.businessEntries || [];
     const monthlySales = businessEntries
       .filter((e) => e.type === "sale" && e.date.startsWith(currentMonth))
       .reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
 
-    // Spending Plan
     const spendingPlans = data.generator?.spendingPlans || [];
     const latestPlan = spendingPlans.sort((a, b) =>
       b.date.localeCompare(a.date),
     )[0];
+
     let planRemaining = null;
-    let planColor = "";
+    let planColor = "text-green-300";
     let progressPercent = 0;
     if (latestPlan) {
       planRemaining = latestPlan.totalIncome - latestPlan.totalAllocated;
@@ -120,7 +108,6 @@ export default function DashboardSummary() {
       );
     }
 
-    // Trips
     const trips = data.trips || [];
     const activeTrips = trips.filter((t) => new Date(t.date) >= new Date());
 
@@ -136,7 +123,25 @@ export default function DashboardSummary() {
     };
   }, [data, today, currentMonth]);
 
-  // Card configurations (memoized)
+  // --- SKELETON LOADER ---
+  if (!data) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-gradient-to-br from-gray-300 to-gray-400 dark:from-gray-700 dark:to-gray-800 rounded-2xl p-5 sm:p-6 h-32 animate-pulse" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <SkeletonCard key={i} />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-white/80 dark:bg-gray-800/80 rounded-2xl p-5 h-32 animate-pulse" />
+          <div className="bg-white/80 dark:bg-gray-800/80 rounded-2xl p-5 h-32 animate-pulse" />
+        </div>
+      </div>
+    );
+  }
+
+  // --- CARD CONFIG (Memoized to prevent re-calculation) ---
   const cardConfigs = useMemo(
     () => [
       {
@@ -202,21 +207,19 @@ export default function DashboardSummary() {
 
   return (
     <div className="space-y-6">
-      {/* 🚀 HERO SECTION (Compact) */}
+      {/* Hero Section */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
         className="bg-gradient-to-br from-primary-600 to-primary-800 dark:from-primary-900 dark:to-gray-800 rounded-2xl p-5 sm:p-6 text-white relative overflow-hidden shadow-md"
       >
         <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2 blur-2xl pointer-events-none" />
-
         <div className="relative z-10 flex flex-col gap-3">
           <div className="flex justify-between items-start sm:items-center">
             <div>
               <p className="text-primary-100/80 text-xs font-medium uppercase tracking-wider">
-                Welcome back, {currentUser.name || "User"} 👋
+                Welcome back, {currentUser?.name || "User"} 👋
               </p>
               <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mt-1">
                 TrackCash
@@ -240,8 +243,6 @@ export default function DashboardSummary() {
               )}
             </div>
           </div>
-
-          {/* Stats Row Inside Hero */}
           <div className="flex flex-wrap items-center gap-2 text-xs">
             <div className="bg-white/10 backdrop-blur-sm rounded-lg px-3 py-1.5 flex items-center gap-1 whitespace-nowrap">
               <TrendingUp className="w-3 h-3 text-green-300" /> Sales:{" "}
@@ -267,7 +268,7 @@ export default function DashboardSummary() {
         </div>
       </motion.div>
 
-      {/* 🚀 4 MAIN CARDS ROW (with lighter animation) */}
+      {/* 4 Cards */}
       <motion.div
         variants={containerVariants}
         initial="hidden"
@@ -281,13 +282,11 @@ export default function DashboardSummary() {
               key={card.key}
               variants={itemVariants}
               whileHover={{ scale: 1.02, y: -2 }}
-              transition={{ duration: 0.2 }}
-              className={`relative bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden border-l-4 ${card.borderColor}`}
+              className={`relative bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm hover:shadow-md overflow-hidden border-l-4 ${card.borderColor}`}
             >
               <div
                 className={`absolute inset-0 ${card.bgColor} pointer-events-none`}
               />
-
               <div className="relative z-10 flex flex-col h-full">
                 <div className="flex items-center justify-between mb-3">
                   <div
@@ -299,14 +298,12 @@ export default function DashboardSummary() {
                     {card.key === "spend" ? "This Month" : ""}
                   </span>
                 </div>
-
                 <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
                   {card.label}
                 </p>
                 <p className="text-2xl font-extrabold text-gray-800 dark:text-white mt-0.5">
                   {card.value}
                 </p>
-
                 {card.isPlan && latestPlan && (
                   <div className="mt-2">
                     <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mb-1">
@@ -317,7 +314,6 @@ export default function DashboardSummary() {
                     </div>
                   </div>
                 )}
-
                 <p
                   className={`mt-2 text-xs font-medium truncate ${card.isPlan && latestPlan ? (planRemaining >= 0 ? "text-primary dark:text-primary-400" : "text-red-500") : "text-gray-400 dark:text-gray-500"}`}
                 >
@@ -329,7 +325,7 @@ export default function DashboardSummary() {
         })}
       </motion.div>
 
-      {/* 🚀 FINANCIAL SNAPSHOT (No animations for faster load) */}
+      {/* Snapshot Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm">
           <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center gap-2 mb-3">
@@ -364,7 +360,6 @@ export default function DashboardSummary() {
             </div>
           </div>
         </div>
-
         <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm">
           <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center gap-2 mb-3">
             <Calendar className="w-4 h-4 text-primary" /> Today's Activity
