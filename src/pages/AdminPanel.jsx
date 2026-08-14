@@ -13,7 +13,6 @@ import {
   Wallet,
   DollarSign,
   TrendingUp,
-  TrendingDown,
   BarChart3,
   ShieldCheck,
 } from "lucide-react";
@@ -54,9 +53,15 @@ export default function AdminPanel() {
           },
         );
         const data = await res.json();
-        if (data.total_users !== undefined) totalUsers = data.total_users;
+
+        // ✅ FIX: Throw if the fetch failed or the count is missing
+        if (!res.ok || data.total_users === undefined) {
+          throw new Error(data.error || `Edge function returned ${res.status}`);
+        }
+        totalUsers = data.total_users;
       } catch (err) {
-        console.warn("Edge function fallback activated");
+        // ✅ FIX: The catch block now actually runs when the Edge Function fails
+        console.warn("Edge function fallback activated:", err.message);
         const { count } = await supabase
           .from("user_data")
           .select("*", { count: "exact", head: true });
