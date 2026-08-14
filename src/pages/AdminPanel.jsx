@@ -53,27 +53,29 @@ export default function AdminPanel() {
           },
         );
         const data = await res.json();
-
-        // ✅ FIX: Throw if the fetch failed or the count is missing
         if (!res.ok || data.total_users === undefined) {
           throw new Error(data.error || `Edge function returned ${res.status}`);
         }
         totalUsers = data.total_users;
       } catch (err) {
-        // ✅ FIX: The catch block now actually runs when the Edge Function fails
-        console.warn("Edge function fallback activated:", err.message);
+        console.warn("⚠️ Edge function fallback activated:", err.message);
         const { count } = await supabase
           .from("user_data")
           .select("*", { count: "exact", head: true });
         totalUsers = count || 0;
       }
 
-      // 2. Fetch Engagement Metrics from user_data
+      // 2. Fetch user_data to calculate engagement (using * to get all columns)
       const { data: users, error } = await supabase
         .from("user_data")
-        .select("data, updated_at, created_at");
+        .select("*");
 
-      if (error) throw error;
+      if (error) {
+        console.error("❌ Failed to fetch user_data:", error);
+        throw error;
+      }
+
+      console.log(`✅ Fetched ${users?.length || 0} user data rows.`);
 
       const now = new Date();
       const today = new Date(now.toISOString().split("T")[0]);
@@ -95,25 +97,35 @@ export default function AdminPanel() {
         salesAmt = 0,
         salesCount = 0;
 
-      users?.forEach((u) => {
-        const active = new Date(u.updated_at);
+      users?.forEach((row) => {
+        // Check timestamps safely
+        const createdStr = row.created_at || row.createdAt || null;
+        const updatedStr = row.updated_at || row.updatedAt || null;
+
+        const created = createdStr ? new Date(createdStr) : new Date();
+        const active = updatedStr ? new Date(updatedStr) : created;
+
+        const createdDay = new Date(created.toISOString().split("T")[0]);
         const activeDay = new Date(active.toISOString().split("T")[0]);
+
+        // Active users
         if (activeDay.getTime() === today.getTime()) dau++;
         if (activeDay >= weekAgo) wau++;
         if (activeDay >= monthAgo) mau++;
 
-        const created = new Date(u.created_at);
-        const createdDay = new Date(created.toISOString().split("T")[0]);
+        // New users
         if (createdDay.getTime() === today.getTime()) newToday++;
         if (createdDay >= weekAgo) newWeek++;
         if (createdDay >= monthAgo) newMonth++;
 
-        plans += u.data?.generator?.spendingPlans?.length || 0;
-        logs += u.data?.marketLogs?.length || 0;
-        trips += u.data?.trips?.length || 0;
-        savings += u.data?.savings?.savedAmount || 0;
+        // Platform Usage data (safe access)
+        const userData = row.data || {};
+        plans += userData.generator?.spendingPlans?.length || 0;
+        logs += userData.marketLogs?.length || 0;
+        trips += userData.trips?.length || 0;
+        savings += userData.savings?.savedAmount || 0;
 
-        const entries = u.data?.generator?.businessEntries || [];
+        const entries = userData.generator?.businessEntries || [];
         entries.forEach((e) => {
           if (e.type === "sale") {
             salesAmt += e.amount || 0;
@@ -179,104 +191,9 @@ export default function AdminPanel() {
   const percent = (val) =>
     stats.total_users > 0 ? ((val / stats.total_users) * 100).toFixed(1) : "0";
 
-  // ----- CARD CONFIGS -----
-  const coreCards = [
-    {
-      label: "Total Registered Users",
-      value: formatNumber(stats.total_users),
-      sub: `${stats.new_today} joined today`,
-      icon: Users,
-      color: "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30",
-    },
-    {
-      label: "Daily Active (DAU)",
-      value: formatNumber(stats.dau),
-      sub: `${percent(stats.dau)}% of total`,
-      icon: Activity,
-      color:
-        "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30",
-    },
-    {
-      label: "Weekly Active (WAU)",
-      value: formatNumber(stats.wau),
-      sub: `${percent(stats.wau)}% of total`,
-      icon: Calendar,
-      color:
-        "text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/30",
-    },
-    {
-      label: "Monthly Active (MAU)",
-      value: formatNumber(stats.mau),
-      sub: `${percent(stats.mau)}% of total`,
-      icon: Users,
-      color:
-        "text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30",
-    },
-  ];
-
-  const growthCards = [
-    {
-      label: "New Users (Today)",
-      value: stats.new_today,
-      icon: UserPlus,
-      color:
-        "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30",
-    },
-    {
-      label: "New Users (Week)",
-      value: stats.new_week,
-      icon: TrendingUp,
-      color: "text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/30",
-    },
-    {
-      label: "New Users (Month)",
-      value: stats.new_month,
-      icon: Calendar,
-      color: "text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/30",
-    },
-  ];
-
-  const platformCards = [
-    {
-      label: "Total Spending Plans",
-      value: formatNumber(stats.total_spending_plans),
-      icon: Target,
-      color: "text-pink-600 dark:text-pink-400 bg-pink-50 dark:bg-pink-900/30",
-    },
-    {
-      label: "Total Market Logs",
-      value: formatNumber(stats.total_market_logs),
-      icon: ShoppingCart,
-      color:
-        "text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/30",
-    },
-    {
-      label: "Total Trips Planned",
-      value: formatNumber(stats.total_trips),
-      icon: MapPin,
-      color:
-        "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30",
-    },
-    {
-      label: "Total Savings (All Users)",
-      value: naira(stats.total_savings),
-      icon: Wallet,
-      color:
-        "text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/30",
-    },
-    {
-      label: "Average Sale Amount",
-      value: naira(stats.avg_sale),
-      sub: "Across all business entries",
-      icon: DollarSign,
-      color: "text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/30",
-    },
-  ];
-
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-4 sm:px-6">
       <div className="max-w-7xl mx-auto space-y-8">
-        {/* Header */}
         <div>
           <div className="flex items-center gap-3">
             <BarChart3 className="w-8 h-8 text-primary" />
@@ -291,7 +208,40 @@ export default function AdminPanel() {
 
         {/* Core Metrics */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {coreCards.map((c, i) => {
+          {[
+            {
+              label: "Total Registered Users",
+              value: formatNumber(stats.total_users),
+              sub: `${stats.new_today} joined today`,
+              icon: Users,
+              color:
+                "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30",
+            },
+            {
+              label: "Daily Active (DAU)",
+              value: formatNumber(stats.dau),
+              sub: `${percent(stats.dau)}% of total`,
+              icon: Activity,
+              color:
+                "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30",
+            },
+            {
+              label: "Weekly Active (WAU)",
+              value: formatNumber(stats.wau),
+              sub: `${percent(stats.wau)}% of total`,
+              icon: Calendar,
+              color:
+                "text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/30",
+            },
+            {
+              label: "Monthly Active (MAU)",
+              value: formatNumber(stats.mau),
+              sub: `${percent(stats.mau)}% of total`,
+              icon: Users,
+              color:
+                "text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30",
+            },
+          ].map((c, i) => {
             const Icon = c.icon;
             return (
               <div
@@ -323,7 +273,29 @@ export default function AdminPanel() {
             📈 User Growth
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {growthCards.map((c, i) => {
+            {[
+              {
+                label: "New Users (Today)",
+                value: stats.new_today,
+                icon: UserPlus,
+                color:
+                  "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30",
+              },
+              {
+                label: "New Users (Week)",
+                value: stats.new_week,
+                icon: TrendingUp,
+                color:
+                  "text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/30",
+              },
+              {
+                label: "New Users (Month)",
+                value: stats.new_month,
+                icon: Calendar,
+                color:
+                  "text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/30",
+              },
+            ].map((c, i) => {
               const Icon = c.icon;
               return (
                 <div
@@ -353,7 +325,44 @@ export default function AdminPanel() {
             🚀 Platform Usage
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {platformCards.map((c, i) => {
+            {[
+              {
+                label: "Total Spending Plans",
+                value: formatNumber(stats.total_spending_plans),
+                icon: Target,
+                color:
+                  "text-pink-600 dark:text-pink-400 bg-pink-50 dark:bg-pink-900/30",
+              },
+              {
+                label: "Total Market Logs",
+                value: formatNumber(stats.total_market_logs),
+                icon: ShoppingCart,
+                color:
+                  "text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/30",
+              },
+              {
+                label: "Total Trips Planned",
+                value: formatNumber(stats.total_trips),
+                icon: MapPin,
+                color:
+                  "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30",
+              },
+              {
+                label: "Total Savings (All Users)",
+                value: naira(stats.total_savings),
+                icon: Wallet,
+                color:
+                  "text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/30",
+              },
+              {
+                label: "Average Sale Amount",
+                value: naira(stats.avg_sale),
+                sub: "Across all business entries",
+                icon: DollarSign,
+                color:
+                  "text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/30",
+              },
+            ].map((c, i) => {
               const Icon = c.icon;
               return (
                 <div
