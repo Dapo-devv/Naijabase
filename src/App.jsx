@@ -1,6 +1,7 @@
 import { Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { Instagram, Twitter } from "lucide-react";
+import { useEffect, useState } from "react";
 import Navbar from "./components/Navbar";
 import BottomNav from "./components/BottomNav";
 import AdSlot from "./components/AdSlot";
@@ -19,7 +20,8 @@ import AdminBlogManager from "./pages/AdminBlogManager";
 import BlogIndex from "./pages/BlogIndex";
 import BlogDetail from "./pages/BlogDetail";
 import ResetPassword from "./pages/ResetPassword";
-import { useState, useEffect } from "react";
+import Privacy from "./pages/Privacy"; // 🆕 New Import
+import Terms from "./pages/Terms"; // 🆕 New Import
 
 const pageVariants = {
   initial: { opacity: 0, y: 10 },
@@ -38,6 +40,15 @@ const PageWrapper = ({ children }) => (
     {children}
   </motion.div>
 );
+
+// 🆕 Scroll to top on every route change
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
+}
 
 function ErrorBoundary({ children }) {
   const [hasError, setHasError] = useState(false);
@@ -104,6 +115,7 @@ export default function App() {
     <ErrorBoundary>
       <NaijaBaseProvider>
         <ThemeManager />
+        <ScrollToTop />
 
         <div className="h-screen overflow-hidden bg-[#F8F9FA] dark:bg-[#111827] flex flex-col transition-colors duration-300">
           <Navbar />
@@ -139,6 +151,24 @@ export default function App() {
                     element={
                       <PageWrapper>
                         <ResetPassword />
+                      </PageWrapper>
+                    }
+                  />
+
+                  {/* 🆕 NEW LEGAL PAGES */}
+                  <Route
+                    path="/privacy"
+                    element={
+                      <PageWrapper>
+                        <Privacy />
+                      </PageWrapper>
+                    }
+                  />
+                  <Route
+                    path="/terms"
+                    element={
+                      <PageWrapper>
+                        <Terms />
                       </PageWrapper>
                     }
                   />
@@ -257,15 +287,33 @@ export default function App() {
             <BottomNav />
           </div>
 
+          {/* 🚀 UPDATED FOOTER WITH LEGAL LINKS */}
           <footer className="hidden md:block bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 py-6 mt-auto transition-colors duration-300">
             <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                © {new Date().getFullYear()}{" "}
-                <span className="font-semibold text-primary dark:text-primary-400">
-                  TrackCash
-                </span>
-                . All rights reserved.
-              </p>
+              <div className="flex flex-col sm:flex-row items-center gap-4 text-sm">
+                <p className="text-gray-500 dark:text-gray-400">
+                  © {new Date().getFullYear()}{" "}
+                  <span className="font-semibold text-primary dark:text-primary-400">
+                    TrackCash
+                  </span>
+                  . All rights reserved.
+                </p>
+                <div className="flex items-center gap-4">
+                  <a
+                    href="/privacy"
+                    className="text-gray-400 hover:text-primary transition-colors"
+                  >
+                    Privacy Policy
+                  </a>
+                  <a
+                    href="/terms"
+                    className="text-gray-400 hover:text-primary transition-colors"
+                  >
+                    Terms of Service
+                  </a>
+                </div>
+              </div>
+
               <div className="flex items-center gap-5">
                 <a
                   href="https://www.instagram.com/trackcash.ng"
