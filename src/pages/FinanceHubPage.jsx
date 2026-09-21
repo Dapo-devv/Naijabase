@@ -20,15 +20,16 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import AdSlot from "../components/AdSlot";
 import { useNaijaBase } from "../context/NaijaBaseContext";
-import { todayISO, formatDate, naira } from "../utils/constants";
+import { todayISO, formatDate } from "../utils/constants";
+import { useCurrency } from "../hooks/useCurrency";
 import LoadingSpinner from "../components/LoadingSpinner";
 
 export default function FinanceHubPage() {
   const { currentUser, updateUserData } = useNaijaBase();
+  const { format, symbol } = useCurrency();
   const g = currentUser?.data?.generator;
   if (!g) return null;
 
-  // 🚀 Scroll to top on mount
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
@@ -43,39 +44,32 @@ export default function FinanceHubPage() {
   const [companyName, setCompanyName] = useState(g?.companyName || "");
   const [isCompanyEditing, setIsCompanyEditing] = useState(!g?.companyName);
 
-  // Sales Form States
   const [saleDate, setSaleDate] = useState(todayISO());
   const [saleCustomer, setSaleCustomer] = useState("");
   const [saleProduct, setSaleProduct] = useState("");
   const [saleContact, setSaleContact] = useState("");
   const [saleAmount, setSaleAmount] = useState("");
 
-  // Expense Form States
   const [expenseDate, setExpenseDate] = useState(todayISO());
   const [expenseCategory, setExpenseCategory] = useState("Supplies");
   const [expenseTitle, setExpenseTitle] = useState("");
   const [expenseAmount, setExpenseAmount] = useState("");
 
-  // Staff Salary States
   const [staffDate, setStaffDate] = useState(todayISO());
   const [staffName, setStaffName] = useState("");
   const [staffAmount, setStaffAmount] = useState("");
 
-  // Savings / Investment States
   const [savingsDate, setSavingsDate] = useState(todayISO());
   const [savingsType, setSavingsType] = useState("Savings");
   const [savingsTitle, setSavingsTitle] = useState("");
   const [savingsAmount, setSavingsAmount] = useState("");
 
-  // Edit Modal States
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState(null);
 
-  // Toast State
   const [toast, setToast] = useState(null);
   const [renderKey, setRenderKey] = useState(0);
 
-  // Loading states for each action
   const [isSavingSale, setIsSavingSale] = useState(false);
   const [isSavingExpense, setIsSavingExpense] = useState(false);
   const [isSavingStaff, setIsSavingStaff] = useState(false);
@@ -84,7 +78,6 @@ export default function FinanceHubPage() {
 
   const businessEntries = g.businessEntries || [];
 
-  // --- Filter Logic ---
   const getDateRange = (duration) => {
     const now = new Date();
     const start = new Date();
@@ -124,12 +117,10 @@ export default function FinanceHubPage() {
     return entries.sort((a, b) => b.date.localeCompare(a.date));
   }, [businessEntries, filterType, filterDuration]);
 
-  // --- All-Time Revenue ---
   const allTimeRevenue = businessEntries
     .filter((e) => e.type === "sale")
     .reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
 
-  // --- Current Month Financials ---
   const currentMonth = todayISO().slice(0, 7);
 
   const monthlyRevenue = businessEntries
@@ -151,13 +142,11 @@ export default function FinanceHubPage() {
   const balanceLeft =
     monthlyRevenue - monthlyExpenses - monthlyStaffCost - monthlySavings;
 
-  // --- Unique Months ---
   const monthKeys = useMemo(() => {
     const months = businessEntries.map((e) => e.date.slice(0, 7));
     return [...new Set(months)].sort((a, b) => b.localeCompare(a));
   }, [businessEntries]);
 
-  // --- Filtered Month Entries ---
   const filteredMonthEntries = useMemo(() => {
     if (!selectedMonth) return [];
     return businessEntries
@@ -165,7 +154,6 @@ export default function FinanceHubPage() {
       .sort((a, b) => b.date.localeCompare(a.date));
   }, [businessEntries, selectedMonth]);
 
-  // --- Monthly Totals Breakdown ---
   const selectedMonthTotals = useMemo(() => {
     if (!selectedMonth) return {};
     const entries = businessEntries.filter((e) =>
@@ -214,7 +202,6 @@ export default function FinanceHubPage() {
     };
   }, [businessEntries, selectedMonth]);
 
-  // --- Monthly Revenue Breakdown for All-Time Revenue Card ---
   const monthlyRevenueBreakdown = useMemo(() => {
     const months = {};
     businessEntries
@@ -226,13 +213,11 @@ export default function FinanceHubPage() {
     return Object.entries(months).sort((a, b) => b[0].localeCompare(a[0]));
   }, [businessEntries]);
 
-  // --- Toast Helper ---
   const showToast = (message) => {
     setToast(message);
     setTimeout(() => setToast(null), 2500);
   };
 
-  // --- Handle Company Name ---
   const handleSaveCompany = () => {
     updateUserData((d) => ({
       ...d,
@@ -245,7 +230,6 @@ export default function FinanceHubPage() {
     showToast("Company name saved!");
   };
 
-  // --- Handle Sales ---
   const handleAddSale = async () => {
     if (
       !saleCustomer.trim() ||
@@ -290,7 +274,6 @@ export default function FinanceHubPage() {
     showToast("✅ Sale saved!");
   };
 
-  // --- Handle Expenses ---
   const handleAddExpense = async () => {
     if (
       !expenseTitle.trim() ||
@@ -330,7 +313,6 @@ export default function FinanceHubPage() {
     showToast("✅ Expense saved!");
   };
 
-  // --- Handle Staff Salary ---
   const handleAddStaff = async () => {
     if (!staffName.trim() || !staffAmount || parseFloat(staffAmount) <= 0) {
       alert("Please enter staff name and salary amount.");
@@ -366,7 +348,6 @@ export default function FinanceHubPage() {
     showToast("✅ Staff salary saved!");
   };
 
-  // --- Handle Savings / Investment ---
   const handleAddSavings = async () => {
     if (
       !savingsTitle.trim() ||
@@ -406,7 +387,6 @@ export default function FinanceHubPage() {
     showToast("✅ Savings saved!");
   };
 
-  // --- Edit Modal Helpers ---
   const openEditMode = () => {
     setIsEditing(true);
     setEditForm({ ...viewingEntry });
@@ -491,7 +471,6 @@ export default function FinanceHubPage() {
     showToast("🗑️ Entry deleted");
   };
 
-  // --- Render ---
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -524,7 +503,7 @@ export default function FinanceHubPage() {
         </p>
       </div>
 
-      {/* --- Navigation Tabs --- */}
+      {/* Navigation Tabs */}
       <motion.div
         className="flex flex-wrap gap-2 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl"
         initial={{ opacity: 0 }}
@@ -556,7 +535,7 @@ export default function FinanceHubPage() {
         })}
       </motion.div>
 
-      {/* --- Overview Tab --- */}
+      {/* Overview Tab */}
       {activeTab === "overview" && (
         <motion.div
           initial={{ opacity: 0 }}
@@ -622,25 +601,25 @@ export default function FinanceHubPage() {
             {[
               {
                 label: "Monthly Revenue",
-                value: naira(monthlyRevenue),
+                value: format(monthlyRevenue),
                 color: "green",
               },
               {
                 label: "Monthly Expenses",
-                value: naira(monthlyExpenses),
+                value: format(monthlyExpenses),
                 color: "red",
               },
               {
                 label: "Monthly Staff Costs",
-                value: naira(monthlyStaffCost),
+                value: format(monthlyStaffCost),
                 color: "blue",
               },
               {
                 label: "Balance Left",
                 value:
                   balanceLeft >= 0
-                    ? naira(balanceLeft)
-                    : `-${naira(Math.abs(balanceLeft))}`,
+                    ? format(balanceLeft)
+                    : `-${format(Math.abs(balanceLeft))}`,
                 color: balanceLeft >= 0 ? "primary" : "red",
               },
             ].map((card, idx) => (
@@ -676,7 +655,7 @@ export default function FinanceHubPage() {
               Monthly Savings & Investments
             </p>
             <p className="text-3xl font-extrabold text-yellow-600 dark:text-yellow-400 mt-1">
-              {naira(monthlySavings)}
+              {format(monthlySavings)}
             </p>
           </motion.div>
 
@@ -697,7 +676,7 @@ export default function FinanceHubPage() {
               )}
             </div>
             <p className="text-4xl font-extrabold text-green-600 dark:text-green-400 mt-1">
-              {naira(allTimeRevenue)}
+              {format(allTimeRevenue)}
             </p>
           </motion.div>
 
@@ -721,7 +700,7 @@ export default function FinanceHubPage() {
                   ) : (
                     monthlyRevenueBreakdown.map(([month, total]) => {
                       const dateObj = new Date(month + "-01");
-                      const label = dateObj.toLocaleDateString("en-NG", {
+                      const label = dateObj.toLocaleDateString("en-US", {
                         month: "short",
                         year: "numeric",
                       });
@@ -736,7 +715,7 @@ export default function FinanceHubPage() {
                             {label}
                           </span>
                           <span className="text-sm font-bold text-green-600 dark:text-green-400">
-                            {naira(total)}
+                            {format(total)}
                           </span>
                         </motion.div>
                       );
@@ -747,7 +726,7 @@ export default function FinanceHubPage() {
             )}
           </AnimatePresence>
 
-          {/* Month Selection Buttons */}
+          {/* Month Selection */}
           {monthKeys.length > 0 && (
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-5">
               <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">
@@ -756,7 +735,7 @@ export default function FinanceHubPage() {
               <div className="flex flex-wrap gap-2">
                 {monthKeys.map((month) => {
                   const dateObj = new Date(month + "-01");
-                  const label = dateObj.toLocaleDateString("en-NG", {
+                  const label = dateObj.toLocaleDateString("en-US", {
                     month: "long",
                     year: "numeric",
                   });
@@ -782,7 +761,7 @@ export default function FinanceHubPage() {
         </motion.div>
       )}
 
-      {/* --- Monthly Archive View --- */}
+      {/* Monthly Archive View */}
       {selectedMonth && activeTab === "overview" && (
         <motion.div
           initial={{ opacity: 0 }}
@@ -792,7 +771,7 @@ export default function FinanceHubPage() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold text-neutral-text dark:text-white flex items-center gap-2">
               <Calendar className="w-5 h-5 text-primary dark:text-primary-400" />
-              {new Date(selectedMonth + "-01").toLocaleDateString("en-NG", {
+              {new Date(selectedMonth + "-01").toLocaleDateString("en-US", {
                 month: "long",
                 year: "numeric",
               })}
@@ -807,7 +786,6 @@ export default function FinanceHubPage() {
             </motion.button>
           </div>
 
-          {/* Category Totals */}
           {selectedMonthTotals && (
             <motion.div
               className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6"
@@ -821,42 +799,42 @@ export default function FinanceHubPage() {
               {[
                 {
                   label: "Sales",
-                  value: naira(selectedMonthTotals.sales),
+                  value: format(selectedMonthTotals.sales),
                   color: "green",
                 },
                 {
                   label: "Staff",
-                  value: naira(selectedMonthTotals.staff),
+                  value: format(selectedMonthTotals.staff),
                   color: "blue",
                 },
                 {
                   label: "Savings",
-                  value: naira(selectedMonthTotals.savings),
+                  value: format(selectedMonthTotals.savings),
                   color: "yellow",
                 },
                 {
                   label: "Transport",
-                  value: naira(selectedMonthTotals.transport),
+                  value: format(selectedMonthTotals.transport),
                   color: "orange",
                 },
                 {
                   label: "Utilities",
-                  value: naira(selectedMonthTotals.utilities),
+                  value: format(selectedMonthTotals.utilities),
                   color: "purple",
                 },
                 {
                   label: "Marketing",
-                  value: naira(selectedMonthTotals.marketing),
+                  value: format(selectedMonthTotals.marketing),
                   color: "pink",
                 },
                 {
                   label: "Rent",
-                  value: naira(selectedMonthTotals.rent),
+                  value: format(selectedMonthTotals.rent),
                   color: "indigo",
                 },
                 {
                   label: "Supplies/Other",
-                  value: naira(
+                  value: format(
                     selectedMonthTotals.supplies + selectedMonthTotals.other,
                   ),
                   color: "gray",
@@ -956,7 +934,7 @@ export default function FinanceHubPage() {
                       }`}
                     >
                       {entry.type === "sale" ? "+" : "-"}
-                      {naira(entry.amount)}
+                      {format(entry.amount)}
                     </span>
                     <motion.button
                       whileHover={{ scale: 1.05 }}
@@ -982,7 +960,7 @@ export default function FinanceHubPage() {
         </motion.div>
       )}
 
-      {/* --- Filtered Transaction History --- */}
+      {/* Filtered Transaction History */}
       {!selectedMonth && activeTab === "overview" && (
         <motion.div
           initial={{ opacity: 0 }}
@@ -1098,7 +1076,7 @@ export default function FinanceHubPage() {
                       }`}
                     >
                       {entry.type === "sale" ? "+" : "-"}
-                      {naira(entry.amount)}
+                      {format(entry.amount)}
                     </span>
                     <motion.button
                       whileHover={{ scale: 1.05 }}
@@ -1124,7 +1102,7 @@ export default function FinanceHubPage() {
         </motion.div>
       )}
 
-      {/* --- Sales Tab --- */}
+      {/* Sales Tab */}
       {activeTab === "sales" && (
         <motion.div
           initial={{ opacity: 0 }}
@@ -1159,7 +1137,7 @@ export default function FinanceHubPage() {
                 type="text"
                 value={saleCustomer}
                 onChange={(e) => setSaleCustomer(e.target.value)}
-                placeholder="e.g. Mr. Ade"
+                placeholder="e.g. Mr. John"
                 className="mt-1 w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
               />
             </div>
@@ -1171,7 +1149,7 @@ export default function FinanceHubPage() {
                 type="text"
                 value={saleProduct}
                 onChange={(e) => setSaleProduct(e.target.value)}
-                placeholder="e.g. 90-min massage"
+                placeholder="e.g. Consulting session"
                 className="mt-1 w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
               />
             </div>
@@ -1189,7 +1167,7 @@ export default function FinanceHubPage() {
             </div>
             <div className="sm:col-span-2">
               <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                Amount (₦)
+                Amount ({symbol})
               </label>
               <input
                 type="number"
@@ -1218,7 +1196,7 @@ export default function FinanceHubPage() {
         </motion.div>
       )}
 
-      {/* --- Expenses Tab --- */}
+      {/* Expenses Tab */}
       {activeTab === "expenses" && (
         <motion.div
           initial={{ opacity: 0 }}
@@ -1271,13 +1249,13 @@ export default function FinanceHubPage() {
                 type="text"
                 value={expenseTitle}
                 onChange={(e) => setExpenseTitle(e.target.value)}
-                placeholder="e.g. Bought massage oil"
+                placeholder="e.g. Bought office supplies"
                 className="mt-1 w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
               />
             </div>
             <div>
               <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                Amount (₦)
+                Amount ({symbol})
               </label>
               <input
                 type="number"
@@ -1306,7 +1284,7 @@ export default function FinanceHubPage() {
         </motion.div>
       )}
 
-      {/* --- Staff Tab --- */}
+      {/* Staff Tab */}
       {activeTab === "staff" && (
         <motion.div
           initial={{ opacity: 0 }}
@@ -1347,7 +1325,7 @@ export default function FinanceHubPage() {
             </div>
             <div className="sm:col-span-2">
               <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                Salary Amount (₦)
+                Salary Amount ({symbol})
               </label>
               <input
                 type="number"
@@ -1376,7 +1354,7 @@ export default function FinanceHubPage() {
         </motion.div>
       )}
 
-      {/* --- Savings Tab --- */}
+      {/* Savings Tab */}
       {activeTab === "savings" && (
         <motion.div
           initial={{ opacity: 0 }}
@@ -1430,7 +1408,7 @@ export default function FinanceHubPage() {
             </div>
             <div>
               <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                Amount (₦)
+                Amount ({symbol})
               </label>
               <input
                 type="number"
@@ -1454,14 +1432,14 @@ export default function FinanceHubPage() {
             ) : (
               <Plus className="w-5 h-5" />
             )}
-            {isSavingSavings ? "Saving..." : "Add to {savingsType}"}
+            {isSavingSavings ? "Saving..." : "Add to Savings"}
           </motion.button>
         </motion.div>
       )}
 
       <AdSlot width={300} height={250} />
 
-      {/* --- View / Edit Modal --- */}
+      {/* View / Edit Modal */}
       <AnimatePresence>
         {viewingEntry && (
           <motion.div
@@ -1477,7 +1455,6 @@ export default function FinanceHubPage() {
               transition={{ type: "spring", damping: 20 }}
               className="bg-white dark:bg-gray-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700"
             >
-              {/* ... modal content ... */}
               <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-700">
                 <h3 className="text-lg font-bold text-neutral-text dark:text-white">
                   {isEditing ? "Edit Entry" : "Business Entry Details"}
@@ -1509,7 +1486,6 @@ export default function FinanceHubPage() {
               <div className="p-5 space-y-4">
                 {isEditing ? (
                   <div className="space-y-3">
-                    {/* ... edit form fields ... */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
@@ -1689,7 +1665,7 @@ export default function FinanceHubPage() {
                         }
                       >
                         <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                          Amount (₦)
+                          Amount ({symbol})
                         </label>
                         <input
                           type="number"
@@ -1731,7 +1707,6 @@ export default function FinanceHubPage() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {/* ... view details ... */}
                     <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3">
                       <span className="text-sm text-gray-500 dark:text-gray-400">
                         Date
@@ -1756,7 +1731,14 @@ export default function FinanceHubPage() {
                               : "Savings"}
                       </span>
                     </div>
-                    {/* ... more details ... */}
+                    <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3">
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
+                        Title
+                      </span>
+                      <span className="font-semibold text-gray-800 dark:text-gray-200">
+                        {viewingEntry.title}
+                      </span>
+                    </div>
                     <div className="flex justify-between items-center bg-primary-50 dark:bg-primary-900/30 rounded-xl p-3">
                       <span className="text-sm text-primary-600 dark:text-primary-400">
                         Amount
@@ -1764,7 +1746,7 @@ export default function FinanceHubPage() {
                       <span
                         className={`font-bold text-lg ${viewingEntry.type === "sale" ? "text-green-600 dark:text-green-400" : viewingEntry.type === "expense" || viewingEntry.type === "staff" ? "text-red-500 dark:text-red-400" : "text-yellow-600 dark:text-yellow-400"}`}
                       >
-                        {naira(viewingEntry.amount)}
+                        {format(viewingEntry.amount)}
                       </span>
                     </div>
                   </div>

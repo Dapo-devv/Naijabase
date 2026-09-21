@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { X, Plus } from "lucide-react";
 import { COMMON_MARKET_ITEMS } from "../utils/constants";
+import { useCurrency } from "../hooks/useCurrency";
 
 export default function MarketItemList({
   items,
@@ -9,6 +10,7 @@ export default function MarketItemList({
   onAddItem,
   onRemoveItem,
 }) {
+  const { symbol } = useCurrency();
   const [showAdd, setShowAdd] = useState(false);
   const [custom, setCustom] = useState("");
 
@@ -85,7 +87,7 @@ export default function MarketItemList({
             </span>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 text-sm">
-                ₦
+                {symbol}
               </span>
               <input
                 type="number"

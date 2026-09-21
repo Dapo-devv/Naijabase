@@ -19,24 +19,22 @@ export default function BlogIndex() {
   return (
     <div className="min-h-screen bg-neutral-bg dark:bg-gray-900 py-6 px-4 transition-colors duration-300">
       <div className="max-w-4xl mx-auto animate-fade-in">
-        {/* Page Header */}
         <div className="mb-6">
           <h1 className="text-2xl font-extrabold text-neutral-text dark:text-white flex items-center gap-2">
-            <BookOpen className="w-6 h-6 text-primary" /> NaijaBase Blog
+            <BookOpen className="w-6 h-6 text-primary" /> TrackCash Blog
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Guides for market prices, generators, trips, and savings.
+            Guides on expenses, business finance, spending plans, and saving —
+            for people everywhere.
           </p>
         </div>
 
-        {/* Blog Cards Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {posts.map((p) => (
             <article
               key={p.id}
               className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 hover:shadow-md dark:hover:shadow-lg dark:hover:shadow-black/30 transition-all duration-300 flex flex-col"
             >
-              {/* Tag Pills */}
               <span className="inline-block text-xs font-semibold text-primary bg-primary-50 dark:bg-primary-900/30 dark:text-primary-400 px-2.5 py-1 rounded-full w-fit mb-3">
                 {p.tag}
               </span>

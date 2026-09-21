@@ -99,7 +99,7 @@ export function NaijaBaseProvider({ children }) {
         password,
         options: {
           data: { username, name, surname },
-          emailRedirectTo: `${window.location.origin}/login`, // ✅ User will land here after confirmation
+          emailRedirectTo: `${window.location.origin}/login`,
         },
       });
       if (authError)
@@ -138,7 +138,6 @@ export function NaijaBaseProvider({ children }) {
     return { ok: true };
   }, []);
 
-  // 🚀 Resend confirmation email
   const resendConfirmation = useCallback(async (email) => {
     const { error } = await supabase.auth.resend({
       type: "signup",

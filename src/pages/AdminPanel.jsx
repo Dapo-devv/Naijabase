@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "../lib/supabase";
-import { naira } from "../utils/constants";
+import { formatCurrency } from "../utils/constants";
 import { useNaijaBase } from "../context/NaijaBaseContext";
 import {
   Users,
@@ -41,7 +41,7 @@ export default function AdminPanel() {
     if (!currentUser || currentUser.email !== ADMIN_EMAIL) return;
 
     try {
-      // 1. Fetch Accurate Total Users via Edge Function
+      // 1. Fetch accurate total users via Edge Function
       let totalUsers = 0;
       try {
         const res = await fetch(
@@ -65,7 +65,7 @@ export default function AdminPanel() {
         totalUsers = count || 0;
       }
 
-      // 2. Fetch user_data to calculate engagement (using * to get all columns)
+      // 2. Fetch user_data for engagement metrics
       const { data: users, error } = await supabase
         .from("user_data")
         .select("*");
@@ -74,8 +74,6 @@ export default function AdminPanel() {
         console.error("❌ Failed to fetch user_data:", error);
         throw error;
       }
-
-      console.log(`✅ Fetched ${users?.length || 0} user data rows.`);
 
       const now = new Date();
       const today = new Date(now.toISOString().split("T")[0]);
@@ -98,7 +96,6 @@ export default function AdminPanel() {
         salesCount = 0;
 
       users?.forEach((row) => {
-        // Check timestamps safely
         const createdStr = row.created_at || row.createdAt || null;
         const updatedStr = row.updated_at || row.updatedAt || null;
 
@@ -108,17 +105,14 @@ export default function AdminPanel() {
         const createdDay = new Date(created.toISOString().split("T")[0]);
         const activeDay = new Date(active.toISOString().split("T")[0]);
 
-        // Active users
         if (activeDay.getTime() === today.getTime()) dau++;
         if (activeDay >= weekAgo) wau++;
         if (activeDay >= monthAgo) mau++;
 
-        // New users
         if (createdDay.getTime() === today.getTime()) newToday++;
         if (createdDay >= weekAgo) newWeek++;
         if (createdDay >= monthAgo) newMonth++;
 
-        // Platform Usage data (safe access)
         const userData = row.data || {};
         plans += userData.generator?.spendingPlans?.length || 0;
         logs += userData.marketLogs?.length || 0;
@@ -159,7 +153,6 @@ export default function AdminPanel() {
     fetchAdminData();
   }, [fetchAdminData]);
 
-  // 🛡️ Security Gate
   if (!currentUser || currentUser.email !== ADMIN_EMAIL) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center p-6">
@@ -349,14 +342,14 @@ export default function AdminPanel() {
               },
               {
                 label: "Total Savings (All Users)",
-                value: naira(stats.total_savings),
+                value: formatCurrency(stats.total_savings, "USD"),
                 icon: Wallet,
                 color:
                   "text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/30",
               },
               {
                 label: "Average Sale Amount",
-                value: naira(stats.avg_sale),
+                value: formatCurrency(stats.avg_sale, "USD"),
                 sub: "Across all business entries",
                 icon: DollarSign,
                 color:

@@ -14,28 +14,29 @@ import { motion, AnimatePresence } from "framer-motion";
 import AdSlot from "../components/AdSlot";
 import TripStateSelector from "../components/TripStateSelector";
 import { useNaijaBase } from "../context/NaijaBaseContext";
-import { todayISO, formatDate, naira } from "../utils/constants";
+import { todayISO, formatDate } from "../utils/constants";
+import { useCurrency } from "../hooks/useCurrency";
 import LoadingSpinner from "../components/LoadingSpinner";
 
 export default function TripPage() {
   const { currentUser, updateUserData } = useNaijaBase();
+  const { format, symbol } = useCurrency();
   const data = currentUser?.data;
 
-  // 🚀 Scroll to top on mount
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
   const [editingTripId, setEditingTripId] = useState(null);
   const [viewingTrip, setViewingTrip] = useState(null);
-  const [originCountry, setOriginCountry] = useState("Nigeria");
+  const [originCountry, setOriginCountry] = useState("United States");
   const [originRegion, setOriginRegion] = useState("");
-  const [destCountry, setDestCountry] = useState("Nigeria");
+  const [destCountry, setDestCountry] = useState("United States");
   const [destRegion, setDestRegion] = useState("");
   const [tripDate, setTripDate] = useState(todayISO());
 
   const [budgetItems, setBudgetItems] = useState([
-    { id: 1, name: "Transport (Local)", amount: 0 },
+    { id: 1, name: "Transport", amount: 0 },
     { id: 2, name: "Accommodation", amount: 0 },
     { id: 3, name: "Food & Drinks", amount: 0 },
     { id: 4, name: "Activities & Tours", amount: 0 },
@@ -82,9 +83,9 @@ export default function TripPage() {
     if (!trip) return;
 
     setEditingTripId(id);
-    setOriginCountry(trip.originCountry || "Nigeria");
+    setOriginCountry(trip.originCountry || "United States");
     setOriginRegion(trip.originRegion || "");
-    setDestCountry(trip.destCountry || "Nigeria");
+    setDestCountry(trip.destCountry || "United States");
     setDestRegion(trip.destRegion || "");
     setTripDate(trip.date || todayISO());
     setBudgetItems(trip.budgetItems || []);
@@ -124,13 +125,13 @@ export default function TripPage() {
     setSaved(true);
     setEditingTripId(null);
 
-    setOriginCountry("Nigeria");
+    setOriginCountry("United States");
     setOriginRegion("");
-    setDestCountry("Nigeria");
+    setDestCountry("United States");
     setDestRegion("");
     setTripDate(todayISO());
     setBudgetItems([
-      { id: 1, name: "Transport (Local)", amount: 0 },
+      { id: 1, name: "Transport", amount: 0 },
       { id: 2, name: "Accommodation", amount: 0 },
       { id: 3, name: "Food & Drinks", amount: 0 },
       { id: 4, name: "Activities & Tours", amount: 0 },
@@ -261,7 +262,7 @@ export default function TripPage() {
                 </span>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 text-sm">
-                    ₦
+                    {symbol}
                   </span>
                   <input
                     type="number"
@@ -271,7 +272,7 @@ export default function TripPage() {
                       handleAmountChange(item.id, e.target.value)
                     }
                     placeholder="0"
-                    className="w-32 pl-7 pr-2 py-2 text-sm text-right border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                    className="w-32 pl-8 pr-2 py-2 text-sm text-right border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
                   />
                 </div>
                 <motion.button
@@ -312,7 +313,7 @@ export default function TripPage() {
               Total Estimated Budget
             </p>
             <p className="text-2xl font-extrabold text-primary dark:text-primary-400">
-              {naira(totalBudget)}
+              {format(totalBudget)}
             </p>
           </div>
           <motion.button
@@ -389,7 +390,7 @@ export default function TripPage() {
                       Budget
                     </p>
                     <p className="text-lg font-bold text-primary dark:text-primary-400">
-                      {naira(trip.totalBudget || 0)}
+                      {format(trip.totalBudget || 0)}
                     </p>
                   </div>
                   <motion.button
@@ -474,7 +475,7 @@ export default function TripPage() {
                     Total Budget
                   </span>
                   <span className="font-bold text-primary dark:text-primary-400 text-lg">
-                    {naira(viewingTrip.totalBudget || 0)}
+                    {format(viewingTrip.totalBudget || 0)}
                   </span>
                 </div>
                 <div className="border-t border-gray-100 dark:border-gray-700 pt-3">
@@ -492,7 +493,7 @@ export default function TripPage() {
                             {item.name}
                           </span>
                           <span className="font-medium text-gray-900 dark:text-white">
-                            {naira(item.amount)}
+                            {format(item.amount)}
                           </span>
                         </div>
                       ))}

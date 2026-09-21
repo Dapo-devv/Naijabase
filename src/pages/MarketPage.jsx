@@ -15,11 +15,13 @@ import AdSlot from "../components/AdSlot";
 import MarketItemList from "../components/MarketItemList";
 import MarketChart from "../components/MarketChart";
 import { useNaijaBase } from "../context/NaijaBaseContext";
-import { formatDate, naira } from "../utils/constants";
+import { formatDate } from "../utils/constants";
+import { useCurrency } from "../hooks/useCurrency";
 import LoadingSpinner from "../components/LoadingSpinner";
 
 export default function MarketPage() {
   const { currentUser, updateUserData } = useNaijaBase();
+  const { format, symbol } = useCurrency();
   const data = currentUser?.data;
 
   const [viewingLog, setViewingLog] = useState(null);
@@ -41,7 +43,6 @@ export default function MarketPage() {
   const justSavedRef = useRef(false);
   const hasLoadedRef = useRef(false);
 
-  // 🚀 Scroll to top on mount
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
@@ -358,7 +359,7 @@ export default function MarketPage() {
             {monthKeys.length ? (
               monthKeys.map((month) => {
                 const label = new Date(month + "-01").toLocaleDateString(
-                  "en-NG",
+                  "en-US",
                   { month: "long", year: "numeric" },
                 );
                 return (
@@ -394,7 +395,7 @@ export default function MarketPage() {
             {[
               {
                 label: "Total Spent",
-                value: naira(monthlyTotals.totalSpent),
+                value: format(monthlyTotals.totalSpent),
                 color: "green",
               },
               {
@@ -409,7 +410,7 @@ export default function MarketPage() {
               },
               {
                 label: "Avg. Per Day",
-                value: naira(
+                value: format(
                   monthlyTotals.daysLogged
                     ? Math.round(
                         monthlyTotals.totalSpent / monthlyTotals.daysLogged,
@@ -471,7 +472,7 @@ export default function MarketPage() {
                     </p>
                     <p className="text-sm text-gray-500 dark:text-gray-400 break-words">
                       {Object.keys(log.prices).length} items · Total:{" "}
-                      {naira(dailyTotal)}
+                      {format(dailyTotal)}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
@@ -509,7 +510,7 @@ export default function MarketPage() {
                 {selectedMonth
                   ? `📭 No entries found for ${new Date(
                       selectedMonth + "-01",
-                    ).toLocaleDateString("en-NG", {
+                    ).toLocaleDateString("en-US", {
                       month: "long",
                       year: "numeric",
                     })}.`
@@ -563,7 +564,7 @@ export default function MarketPage() {
                     Total Spent
                   </span>
                   <span className="font-bold text-primary dark:text-primary-400 text-lg break-words">
-                    {naira(
+                    {format(
                       Object.values(viewingLog.prices).reduce(
                         (a, b) => a + b,
                         0,
@@ -585,7 +586,7 @@ export default function MarketPage() {
                           {item}
                         </span>
                         <span className="font-medium text-gray-900 dark:text-white break-words">
-                          {naira(price)}
+                          {format(price)}
                         </span>
                       </div>
                     ))}
@@ -655,7 +656,6 @@ export default function MarketPage() {
                   </div>
                 </div>
 
-                {/* Editable Item List */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 break-words">
@@ -691,7 +691,7 @@ export default function MarketPage() {
                         </span>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 text-sm">
-                            ₦
+                            {symbol}
                           </span>
                           <input
                             type="number"
@@ -701,7 +701,7 @@ export default function MarketPage() {
                               handleEditPriceChange(item, e.target.value)
                             }
                             placeholder="0"
-                            className="w-32 pl-7 pr-2 py-1.5 text-sm text-right border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                            className="w-32 pl-8 pr-2 py-1.5 text-sm text-right border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
                           />
                         </div>
                         <motion.button

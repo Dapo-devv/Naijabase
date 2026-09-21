@@ -20,8 +20,9 @@ import AdminBlogManager from "./pages/AdminBlogManager";
 import BlogIndex from "./pages/BlogIndex";
 import BlogDetail from "./pages/BlogDetail";
 import ResetPassword from "./pages/ResetPassword";
-import Privacy from "./pages/Privacy"; // 🆕 New Import
-import Terms from "./pages/Terms"; // 🆕 New Import
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
+import Landing from "./pages/Landing"; // 🆕 NEW
 
 const pageVariants = {
   initial: { opacity: 0, y: 10 },
@@ -91,21 +92,47 @@ function ThemeManager() {
   return null;
 }
 
-// 🛡️ Global guard: prevents any logged-in user from accessing auth pages
-// except during password recovery.
+// 🛡️ Global guard
 function AuthGuard({ children }) {
   const { state, isPasswordRecovery } = useNaijaBase();
   const location = useLocation();
 
-  // If logged in and NOT in recovery, redirect to home (except for /reset-password, which we've already excluded)
   if (state.currentUserId != null && !isPasswordRecovery) {
-    // Only redirect if trying to access login/register (but not reset-password)
     if (location.pathname === "/login" || location.pathname === "/register") {
       return <Navigate to="/" replace />;
     }
   }
 
   return children;
+}
+
+// 🆕 Home route: Landing for guests, Dashboard for logged-in users
+function HomeRoute() {
+  const { state } = useNaijaBase();
+
+  if (state.loading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (state.currentUserId != null) {
+    return (
+      <ProtectedRoute>
+        <PageWrapper>
+          <Dashboard />
+        </PageWrapper>
+      </ProtectedRoute>
+    );
+  }
+
+  return (
+    <PageWrapper>
+      <Landing />
+    </PageWrapper>
+  );
 }
 
 export default function App() {
@@ -124,7 +151,7 @@ export default function App() {
             <div className="min-h-full pb-0">
               <AnimatePresence mode="wait">
                 <Routes location={location} key={location.pathname}>
-                  {/* 🟢 PUBLIC ROUTES - NO PROTECTED WRAPPER */}
+                  {/* 🟢 PUBLIC ROUTES */}
                   <Route
                     path="/login"
                     element={
@@ -145,7 +172,6 @@ export default function App() {
                       </PageWrapper>
                     }
                   />
-                  {/* 🟢 RESET PASSWORD - UNGATED */}
                   <Route
                     path="/reset-password"
                     element={
@@ -155,7 +181,7 @@ export default function App() {
                     }
                   />
 
-                  {/* 🆕 NEW LEGAL PAGES */}
+                  {/* 🆕 LEGAL PAGES */}
                   <Route
                     path="/privacy"
                     element={
@@ -173,17 +199,10 @@ export default function App() {
                     }
                   />
 
-                  {/* 🔒 PROTECTED ROUTES (require login) */}
-                  <Route
-                    path="/"
-                    element={
-                      <ProtectedRoute>
-                        <PageWrapper>
-                          <Dashboard />
-                        </PageWrapper>
-                      </ProtectedRoute>
-                    }
-                  />
+                  {/* 🆕 HOME ROUTE — Landing for guests, Dashboard for users */}
+                  <Route path="/" element={<HomeRoute />} />
+
+                  {/* 🔒 PROTECTED ROUTES */}
                   <Route
                     path="/profile"
                     element={
@@ -287,7 +306,7 @@ export default function App() {
             <BottomNav />
           </div>
 
-          {/* 🚀 UPDATED FOOTER WITH LEGAL LINKS */}
+          {/* Footer */}
           <footer className="hidden md:block bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 py-6 mt-auto transition-colors duration-300">
             <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex flex-col sm:flex-row items-center gap-4 text-sm">

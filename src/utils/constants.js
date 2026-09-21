@@ -5,6 +5,49 @@ export const BG = "#F8F9FA";
 export const CARD = "#FFFFFF";
 export const TEXT_DARK = "#1A1A1A";
 
+// --- CURRENCY SYSTEM ---
+export const CURRENCIES = [
+  { code: "NGN", symbol: "₦", name: "Nigerian Naira", flag: "🇳🇬" },
+  { code: "USD", symbol: "$", name: "US Dollar", flag: "🇺🇸" },
+  { code: "EUR", symbol: "€", name: "Euro", flag: "🇪🇺" },
+  { code: "GBP", symbol: "£", name: "British Pound", flag: "🇬🇧" },
+  { code: "GHS", symbol: "GH₵", name: "Ghanaian Cedi", flag: "🇬🇭" },
+  { code: "KES", symbol: "KSh", name: "Kenyan Shilling", flag: "🇰🇪" },
+  { code: "ZAR", symbol: "R", name: "South African Rand", flag: "🇿🇦" },
+  { code: "EGP", symbol: "E£", name: "Egyptian Pound", flag: "🇪🇬" },
+  { code: "CAD", symbol: "C$", name: "Canadian Dollar", flag: "🇨🇦" },
+  { code: "AUD", symbol: "A$", name: "Australian Dollar", flag: "🇦🇺" },
+  { code: "INR", symbol: "₹", name: "Indian Rupee", flag: "🇮🇳" },
+  { code: "JPY", symbol: "¥", name: "Japanese Yen", flag: "🇯🇵" },
+  { code: "CNY", symbol: "¥", name: "Chinese Yuan", flag: "🇨🇳" },
+  { code: "AED", symbol: "AED", name: "UAE Dirham", flag: "🇦🇪" },
+  { code: "SAR", symbol: "SAR", name: "Saudi Riyal", flag: "🇸🇦" },
+  { code: "CHF", symbol: "CHF", name: "Swiss Franc", flag: "🇨🇭" },
+  { code: "BRL", symbol: "R$", name: "Brazilian Real", flag: "🇧🇷" },
+  { code: "MXN", symbol: "Mex$", name: "Mexican Peso", flag: "🇲🇽" },
+  { code: "TRY", symbol: "₺", name: "Turkish Lira", flag: "🇹🇷" },
+  { code: "PHP", symbol: "₱", name: "Philippine Peso", flag: "🇵🇭" },
+  { code: "IDR", symbol: "Rp", name: "Indonesian Rupiah", flag: "🇮🇩" },
+  { code: "MYR", symbol: "RM", name: "Malaysian Ringgit", flag: "🇲🇾" },
+  { code: "SGD", symbol: "S$", name: "Singapore Dollar", flag: "🇸🇬" },
+  { code: "NZD", symbol: "NZ$", name: "New Zealand Dollar", flag: "🇳🇿" },
+];
+
+export function getCurrency(code) {
+  return CURRENCIES.find((c) => c.code === code) || CURRENCIES[0];
+}
+
+export function getCurrencySymbol(code) {
+  return getCurrency(code).symbol;
+}
+
+export function formatCurrency(amount, code = "NGN") {
+  const symbol = getCurrencySymbol(code);
+  if (amount == null || isNaN(amount)) return symbol + "0";
+  const num = Math.round(Number(amount));
+  return symbol + num.toLocaleString("en-US");
+}
+
 // --- UTILITY FUNCTIONS ---
 export function todayISO() {
   const d = new Date();
@@ -33,20 +76,17 @@ export function formatDate(iso) {
       date = new Date(iso);
     }
   }
-  if (isNaN(date.getTime())) {
-    return "Invalid date";
-  }
-  return date.toLocaleDateString("en-NG", {
+  if (isNaN(date.getTime())) return "Invalid date";
+  return date.toLocaleDateString("en-US", {
     day: "numeric",
     month: "short",
     year: "numeric",
   });
 }
 
+// Backward-compatibility alias
 export function naira(n) {
-  if (n == null || isNaN(n)) return "₦0";
-  const num = Math.round(Number(n));
-  return "₦" + num.toLocaleString("en-NG");
+  return formatCurrency(n, "NGN");
 }
 
 // --- DATA FUNCTIONS ---
@@ -56,12 +96,13 @@ export function getFreshUserData() {
     name: "",
     surname: "",
     email: "",
-    phoneNumber: "", // New field for Personal Info
-    timezone: "Africa/Lagos", // New field
+    phoneNumber: "",
+    timezone: "Africa/Lagos", // Default timezone
+    currency: "NGN", // 🟢 Default currency is Naira
     profilePicture: "",
     theme: "light",
-    loginAlerts: true, // New security layer
-    marketItems: ["Rice", "Beans", "Garri", "Tomatoes", "Oil"],
+    loginAlerts: true,
+    marketItems: ["Rice", "Beans", "Bread", "Milk", "Cooking Oil"],
     marketLogs: [],
     generator: {
       fuelCostPerLiter: "",
@@ -101,15 +142,15 @@ export function getFreshUserData() {
   };
 }
 
-// --- MARKET & GEOGRAPHY CONSTANTS ---
+// --- COMMON MARKET ITEMS ---
 export const COMMON_MARKET_ITEMS = [
-  "Maggi",
-  "Salt",
-  "Sugar",
+  "Rice",
+  "Beans",
+  "Garri",
   "Bread",
   "Milk",
   "Eggs",
-  "Yam",
+  "Tomatoes",
   "Onions",
   "Pepper",
   "Chicken",
@@ -120,7 +161,35 @@ export const COMMON_MARKET_ITEMS = [
   "Cooking Gas",
 ];
 
-export const COUNTRIES = ["Nigeria", "Ghana", "Kenya", "South Africa", "Other"];
+// --- COUNTRIES & REGIONS (GLOBAL) ---
+export const COUNTRIES = [
+  "Nigeria",
+  "Ghana",
+  "Kenya",
+  "South Africa",
+  "Egypt",
+  "United States",
+  "United Kingdom",
+  "Canada",
+  "Australia",
+  "India",
+  "Japan",
+  "China",
+  "Germany",
+  "France",
+  "Spain",
+  "Italy",
+  "Brazil",
+  "Mexico",
+  "United Arab Emirates",
+  "Saudi Arabia",
+  "Singapore",
+  "Malaysia",
+  "Philippines",
+  "Indonesia",
+  "Turkey",
+  "Other",
+];
 
 export const NIGERIA_STATES = [
   "Abia",
@@ -228,7 +297,6 @@ export const KENYA_COUNTIES = [
   "Narok",
   "Kajiado",
   "Nyandarua",
-  "Laikipia",
 ];
 
 export const SA_PROVINCES = [
@@ -243,6 +311,88 @@ export const SA_PROVINCES = [
   "Northern Cape",
 ];
 
+export const US_STATES = [
+  "Alabama",
+  "Alaska",
+  "Arizona",
+  "Arkansas",
+  "California",
+  "Colorado",
+  "Connecticut",
+  "Delaware",
+  "Florida",
+  "Georgia",
+  "Hawaii",
+  "Idaho",
+  "Illinois",
+  "Indiana",
+  "Iowa",
+  "Kansas",
+  "Kentucky",
+  "Louisiana",
+  "Maine",
+  "Maryland",
+  "Massachusetts",
+  "Michigan",
+  "Minnesota",
+  "Mississippi",
+  "Missouri",
+  "Montana",
+  "Nebraska",
+  "Nevada",
+  "New Hampshire",
+  "New Jersey",
+  "New Mexico",
+  "New York",
+  "North Carolina",
+  "North Dakota",
+  "Ohio",
+  "Oklahoma",
+  "Oregon",
+  "Pennsylvania",
+  "Rhode Island",
+  "South Carolina",
+  "South Dakota",
+  "Tennessee",
+  "Texas",
+  "Utah",
+  "Vermont",
+  "Virginia",
+  "Washington",
+  "West Virginia",
+  "Wisconsin",
+  "Wyoming",
+];
+
+export const UK_REGIONS = ["England", "Scotland", "Wales", "Northern Ireland"];
+
+export const CANADA_PROVINCES = [
+  "Alberta",
+  "British Columbia",
+  "Manitoba",
+  "New Brunswick",
+  "Newfoundland and Labrador",
+  "Nova Scotia",
+  "Ontario",
+  "Prince Edward Island",
+  "Quebec",
+  "Saskatchewan",
+  "Northwest Territories",
+  "Nunavut",
+  "Yukon",
+];
+
+export const AUSTRALIA_STATES = [
+  "New South Wales",
+  "Victoria",
+  "Queensland",
+  "Western Australia",
+  "South Australia",
+  "Tasmania",
+  "Australian Capital Territory",
+  "Northern Territory",
+];
+
 export function getRegionsForCountry(country) {
   switch (country) {
     case "Nigeria":
@@ -253,6 +403,14 @@ export function getRegionsForCountry(country) {
       return KENYA_COUNTIES;
     case "South Africa":
       return SA_PROVINCES;
+    case "United States":
+      return US_STATES;
+    case "United Kingdom":
+      return UK_REGIONS;
+    case "Canada":
+      return CANADA_PROVINCES;
+    case "Australia":
+      return AUSTRALIA_STATES;
     default:
       return null;
   }

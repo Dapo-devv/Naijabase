@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import {
   Wallet,
   Calendar,
@@ -12,10 +12,12 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { useNaijaBase } from "../context/NaijaBaseContext";
-import { todayISO, formatDate, naira } from "../utils/constants";
+import { todayISO, formatDate } from "../utils/constants";
+import { useCurrency } from "../hooks/useCurrency";
 
 export default function SavingsPage() {
   const { currentUser, updateUserData } = useNaijaBase();
+  const { format, symbol } = useCurrency();
   const data = currentUser?.data;
 
   // 🚀 Scroll to top on mount
@@ -162,7 +164,7 @@ export default function SavingsPage() {
           Spending Plan
         </h1>
         <p className="text-sm text-gray-500 dark:text-gray-400">
-          Plan your income and allocate every Naira to expenses, savings, and
+          Plan your income and allocate every {symbol} to expenses, savings, and
           goals.
         </p>
       </div>
@@ -182,14 +184,14 @@ export default function SavingsPage() {
 
         <div className="mb-6">
           <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 block">
-            Total Income for this Plan (₦)
+            Total Income for this Plan ({symbol})
           </label>
           <input
             type="number"
             inputMode="numeric"
             value={planIncome}
             onChange={(e) => setPlanIncome(e.target.value)}
-            placeholder="e.g. 100000"
+            placeholder="e.g. 1000"
             className="w-full max-w-xs px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
           />
         </div>
@@ -221,7 +223,7 @@ export default function SavingsPage() {
                 </span>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 text-sm">
-                    ₦
+                    {symbol}
                   </span>
                   <input
                     type="number"
@@ -231,7 +233,7 @@ export default function SavingsPage() {
                       handlePlanAmountChange(item.id, e.target.value)
                     }
                     placeholder="0"
-                    className="w-32 pl-7 pr-2 py-2 text-sm text-right border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                    className="w-32 pl-8 pr-2 py-2 text-sm text-right border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
                   />
                 </div>
                 <motion.button
@@ -273,7 +275,7 @@ export default function SavingsPage() {
                 Total Income
               </p>
               <p className="text-lg font-bold text-green-600 dark:text-green-400">
-                {naira(totalIncome)}
+                {format(totalIncome)}
               </p>
             </div>
             <div>
@@ -281,7 +283,7 @@ export default function SavingsPage() {
                 Allocated
               </p>
               <p className="text-lg font-bold text-red-500 dark:text-red-400">
-                {naira(totalAllocated)}
+                {format(totalAllocated)}
               </p>
             </div>
             <div>
@@ -295,7 +297,7 @@ export default function SavingsPage() {
                     : "text-red-600 dark:text-red-400"
                 }`}
               >
-                {naira(remaining)}
+                {format(remaining)}
               </p>
             </div>
           </div>
@@ -356,8 +358,8 @@ export default function SavingsPage() {
                         Plan from {formatDate(plan.date)}
                       </p>
                       <p className="text-xs text-gray-400 dark:text-gray-500">
-                        Income: {naira(plan.totalIncome)} · Allocated:{" "}
-                        {naira(plan.totalAllocated)}
+                        Income: {format(plan.totalIncome)} · Allocated:{" "}
+                        {format(plan.totalAllocated)}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -393,7 +395,7 @@ export default function SavingsPage() {
                             {item.name}
                           </p>
                           <p className="text-sm font-bold text-primary dark:text-primary-400">
-                            {naira(item.amount)}
+                            {format(item.amount)}
                           </p>
                         </div>
                       ))}
@@ -450,7 +452,7 @@ export default function SavingsPage() {
                       Income
                     </p>
                     <p className="font-bold text-green-600 dark:text-green-400 text-lg">
-                      {naira(viewingPlan.totalIncome)}
+                      {format(viewingPlan.totalIncome)}
                     </p>
                   </div>
                   <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-3 text-center">
@@ -458,7 +460,7 @@ export default function SavingsPage() {
                       Allocated
                     </p>
                     <p className="font-bold text-red-600 dark:text-red-400 text-lg">
-                      {naira(viewingPlan.totalAllocated)}
+                      {format(viewingPlan.totalAllocated)}
                     </p>
                   </div>
                   <div
@@ -479,7 +481,7 @@ export default function SavingsPage() {
                           : "text-red-600 dark:text-red-400"
                       }`}
                     >
-                      {naira(
+                      {format(
                         viewingPlan.totalIncome - viewingPlan.totalAllocated,
                       )}
                     </p>
@@ -500,7 +502,7 @@ export default function SavingsPage() {
                           {item.name}
                         </span>
                         <span className="font-medium text-gray-900 dark:text-white">
-                          {naira(item.amount)}
+                          {format(item.amount)}
                         </span>
                       </div>
                     ))}

@@ -9,8 +9,8 @@ import {
 } from "chart.js";
 import { Bar } from "react-chartjs-2";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { useCurrency } from "../hooks/useCurrency";
 
-// Register Chart.js components
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -21,18 +21,19 @@ ChartJS.register(
 );
 
 const COLORS = [
-  "#0A8C4A", // Primary Green
-  "#F4A261", // Secondary Gold
-  "#2563EB", // Blue
-  "#DC2626", // Red
-  "#7C3AED", // Purple
-  "#0891B2", // Cyan
-  "#EA580C", // Orange
-  "#65A30D", // Lime
+  "#0A8C4A",
+  "#F4A261",
+  "#2563EB",
+  "#DC2626",
+  "#7C3AED",
+  "#0891B2",
+  "#EA580C",
+  "#65A30D",
 ];
 
 export default function MarketChart({ logs, items }) {
-  // 🚀 Check: If there is not enough data, show placeholder
+  const { symbol } = useCurrency();
+
   if (!logs || logs.length < 2) {
     return (
       <div className="bg-gray-50 dark:bg-gray-800/40 rounded-xl p-8 text-center text-gray-400 dark:text-gray-500 border border-dashed dark:border-gray-700">
@@ -44,25 +45,18 @@ export default function MarketChart({ logs, items }) {
     );
   }
 
-  // Sort logs by date for the chart
   const sorted = [...logs].sort((a, b) => a.date.localeCompare(b.date));
 
-  // 🚀 Extract X-axis labels (format dates properly)
   const labels = sorted.map((log) => {
     const date = new Date(log.date);
-    return date.toLocaleDateString("en-NG", {
-      day: "numeric",
-      month: "short",
-    });
+    return date.toLocaleDateString("en-US", { day: "numeric", month: "short" });
   });
 
-  // 🚀 Build datasets for each item
   const datasets = items.map((item, index) => {
     const dataPoints = sorted.map((log) => {
       const value = log.prices?.[item];
       return value != null && !isNaN(value) ? value : null;
     });
-
     return {
       label: item,
       data: dataPoints,
@@ -74,7 +68,6 @@ export default function MarketChart({ logs, items }) {
     };
   });
 
-  // 🚀 Calculate top 3 highest prices across all items and logs
   const allPrices = [];
   logs.forEach((log) => {
     items.forEach((item) => {
@@ -85,21 +78,16 @@ export default function MarketChart({ logs, items }) {
     });
   });
 
-  // Get top 3 highest prices
   const topPrices = allPrices.sort((a, b) => b.price - a.price).slice(0, 3);
 
-  // Calculate price trends (compare latest vs previous)
   const getPriceTrend = (item) => {
     const prices = sorted
       .map((log) => log.prices?.[item])
       .filter((p) => p != null && !isNaN(p) && p > 0);
-
     if (prices.length < 2) return { trend: "neutral", change: 0 };
-
     const latest = prices[prices.length - 1];
     const previous = prices[prices.length - 2];
     const change = ((latest - previous) / previous) * 100;
-
     if (change > 0) return { trend: "up", change: Math.round(change) };
     if (change < 0)
       return { trend: "down", change: Math.round(Math.abs(change)) };
@@ -127,11 +115,9 @@ export default function MarketChart({ logs, items }) {
         callbacks: {
           label: function (context) {
             let label = context.dataset.label || "";
-            if (label) {
-              label += ": ";
-            }
+            if (label) label += ": ";
             if (context.parsed.y !== null) {
-              label += "₦" + context.parsed.y.toLocaleString();
+              label += symbol + context.parsed.y.toLocaleString("en-US");
             }
             return label;
           },
@@ -154,7 +140,7 @@ export default function MarketChart({ logs, items }) {
         ticks: {
           font: { size: 10 },
           callback: function (value) {
-            return "₦" + (value >= 1000 ? value / 1000 + "k" : value);
+            return symbol + (value >= 1000 ? value / 1000 + "k" : value);
           },
           color: document.documentElement.classList.contains("dark")
             ? "#9CA3AF"
@@ -169,14 +155,9 @@ export default function MarketChart({ logs, items }) {
     },
   };
 
-  // 🚀 Calculate total spent across all items for each day
-  const dailyTotals = sorted.map((log) => {
-    const total = Object.values(log.prices).reduce(
-      (sum, val) => sum + (val || 0),
-      0,
-    );
-    return total;
-  });
+  const dailyTotals = sorted.map((log) =>
+    Object.values(log.prices).reduce((sum, val) => sum + (val || 0), 0),
+  );
 
   const highestDailyTotal = Math.max(...dailyTotals);
   const averageDailyTotal =
@@ -184,7 +165,6 @@ export default function MarketChart({ logs, items }) {
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow duration-300">
-      {/* Header Section */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-2">
         <div>
           <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
@@ -206,14 +186,14 @@ export default function MarketChart({ logs, items }) {
         </div>
       </div>
 
-      {/* Stats Summary */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
         <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-2 text-center">
           <p className="text-[10px] text-gray-500 dark:text-gray-400">
             Highest Daily
           </p>
           <p className="text-sm font-bold text-primary dark:text-primary-400">
-            ₦{highestDailyTotal.toLocaleString()}
+            {symbol}
+            {highestDailyTotal.toLocaleString("en-US")}
           </p>
         </div>
         <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-2 text-center">
@@ -221,7 +201,8 @@ export default function MarketChart({ logs, items }) {
             Average Daily
           </p>
           <p className="text-sm font-bold text-secondary dark:text-secondary-400">
-            ₦{Math.round(averageDailyTotal).toLocaleString()}
+            {symbol}
+            {Math.round(averageDailyTotal).toLocaleString("en-US")}
           </p>
         </div>
         <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-2 text-center col-span-2 sm:col-span-1">
@@ -234,12 +215,11 @@ export default function MarketChart({ logs, items }) {
         </div>
       </div>
 
-      {/* 🚀 RESPONSIVE CHART CONTAINER */}
       <div className="w-full h-[250px] sm:h-[300px]">
         <Bar data={chartData} options={chartOptions} />
       </div>
 
-      {/* 🚀 Top 3 Highest Prices Section */}
+      {/* Top 3 Highest Prices */}
       <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-700">
         <div className="flex items-center justify-between mb-3">
           <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
@@ -253,12 +233,10 @@ export default function MarketChart({ logs, items }) {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {topPrices.length > 0 ? (
             topPrices.map(({ item, price, date }, index) => {
-              const formattedDate = new Date(date).toLocaleDateString("en-NG", {
+              const formattedDate = new Date(date).toLocaleDateString("en-US", {
                 day: "numeric",
                 month: "short",
               });
-
-              // Medal emojis for top 3
               const medals = ["🥇", "🥈", "🥉"];
               const bgColors = [
                 "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800",
@@ -270,7 +248,6 @@ export default function MarketChart({ logs, items }) {
                 "text-gray-600 dark:text-gray-400",
                 "text-orange-600 dark:text-orange-400",
               ];
-
               return (
                 <div
                   key={`${item}-${date}`}
@@ -287,7 +264,8 @@ export default function MarketChart({ logs, items }) {
                       </span>
                     </div>
                     <p className={`text-sm font-bold ${textColors[index]}`}>
-                      ₦{price.toLocaleString()}
+                      {symbol}
+                      {price.toLocaleString("en-US")}
                     </p>
                   </div>
                 </div>
@@ -301,7 +279,7 @@ export default function MarketChart({ logs, items }) {
         </div>
       </div>
 
-      {/* 🚀 Price Change Indicators */}
+      {/* Price Trends */}
       <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
         <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
           📊 Price Trends
@@ -321,9 +299,7 @@ export default function MarketChart({ logs, items }) {
                 : trend === "down"
                   ? "text-red-500 dark:text-red-400"
                   : "text-gray-400 dark:text-gray-500";
-
             if (change === 0 && trend === "neutral") return null;
-
             return (
               <div
                 key={item}

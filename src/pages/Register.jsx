@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, Navigate } from "react-router-dom";
-import { Mail, Lock, User, ArrowRight, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, User, ArrowRight, Eye, EyeOff, Coins } from "lucide-react";
 import { useNaijaBase } from "../context/NaijaBaseContext";
 import LoadingSpinner from "../components/LoadingSpinner";
 
@@ -70,16 +70,24 @@ export default function Register() {
           </h1>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-center max-w-xs mx-auto">
             Track daily expenses, monitor business sales, manage staff costs,
-            and grow your savings, all in one secure place.
+            and grow your savings — anywhere in the world.
           </p>
         </div>
 
-        {/* Warm, premium Information Card */}
-        <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl p-3 mb-5 border border-amber-200 dark:border-amber-800 shadow-sm">
-          <p className="text-xs text-amber-800 dark:text-amber-200 leading-relaxed text-center font-medium">
-            Start logging your daily expenses, business income, trips, and
-            savings—all in one place.
-          </p>
+        {/* 🌍 Currency Info Banner */}
+        <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl p-3 mb-5 border border-amber-200 dark:border-amber-800 shadow-sm flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center flex-shrink-0">
+            <Coins className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">
+              Default currency: ₦ Naira
+            </p>
+            <p className="text-[11px] text-amber-700/80 dark:text-amber-300/80">
+              You can switch to USD, EUR, GBP, and 20+ more currencies anytime
+              in your Profile.
+            </p>
+          </div>
         </div>
 
         {successMessage && !confirmationSent && (
@@ -156,7 +164,6 @@ export default function Register() {
               </div>
             ))}
 
-            {/* Password field with eye toggle */}
             <div className="relative group">
               <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-0.5 block">
                 Password
