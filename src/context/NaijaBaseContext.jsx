@@ -28,22 +28,35 @@ export function NaijaBaseProvider({ children }) {
   const [emailConfirmationSent, setEmailConfirmationSent] = useState(false);
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
 
-  const fetchUserData = useCallback(async (userId) => {
-    if (!userId) return;
+  const fetchUserData = useCallback(async (authUser) => {
+    if (!authUser?.id) return;
+    const userId = authUser.id;
     try {
       const { data, error } = await supabase
         .from("user_data")
         .select("data")
         .eq("id", userId)
         .single();
+
       if (error) {
         if (error.code === "PGRST116") {
-          console.log("⚠️ Creating new data row...");
+          // No row exists — create one with full metadata from auth
+          console.log("⚠️ Creating new user_data row with metadata...");
           const freshData = getFreshUserData();
-          await supabase
+          freshData.email = authUser.email || "";
+          freshData.name = authUser.user_metadata?.name || "";
+          freshData.surname = authUser.user_metadata?.surname || "";
+          freshData.username = authUser.user_metadata?.username || "";
+
+          const { error: insertError } = await supabase
             .from("user_data")
             .insert({ id: userId, data: freshData });
-          setUserData(freshData);
+
+          if (insertError) {
+            console.error("❌ Failed to create user data:", insertError);
+          } else {
+            setUserData(freshData);
+          }
         } else if (error.status === 401) {
           await supabase.auth.signOut();
           setUser(null);
@@ -54,7 +67,36 @@ export function NaijaBaseProvider({ children }) {
         }
         return;
       }
-      if (data) setUserData(data.data);
+
+      if (data) {
+        // Ensure metadata stays in sync with auth
+        const userMeta = authUser.user_metadata || {};
+        const needsSync =
+          data.data.email !== authUser.email ||
+          (userMeta.name && data.data.name !== userMeta.name) ||
+          (userMeta.surname && data.data.surname !== userMeta.surname) ||
+          (userMeta.username && data.data.username !== userMeta.username);
+
+        if (needsSync) {
+          const synced = {
+            ...data.data,
+            email: authUser.email,
+            name: userMeta.name || data.data.name,
+            surname: userMeta.surname || data.data.surname,
+            username: userMeta.username || data.data.username,
+          };
+          setUserData(synced);
+          supabase
+            .from("user_data")
+            .update({ data: synced })
+            .eq("id", userId)
+            .then(({ error: e }) => {
+              if (e) console.warn("Metadata sync failed:", e);
+            });
+        } else {
+          setUserData(data.data);
+        }
+      }
     } catch (err) {
       console.error("❌ Unexpected error:", err);
     }
@@ -65,7 +107,7 @@ export function NaijaBaseProvider({ children }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (isMounted && session?.user) {
         setUser(session.user);
-        fetchUserData(session.user.id);
+        fetchUserData(session.user);
       }
       if (isMounted) setLoading(false);
     });
@@ -77,7 +119,7 @@ export function NaijaBaseProvider({ children }) {
 
           if (session?.user) {
             setUser(session.user);
-            await fetchUserData(session.user.id);
+            await fetchUserData(session.user);
           } else {
             setUser(null);
             setUserData(null);
@@ -117,7 +159,7 @@ export function NaijaBaseProvider({ children }) {
       if (!authData.user)
         return { ok: false, error: "Account creation failed." };
       setUser(authData.user);
-      await fetchUserData(authData.user.id);
+      await fetchUserData(authData.user);
       return { ok: true, message: "Account created!" };
     },
     [fetchUserData],
