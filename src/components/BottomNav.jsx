@@ -4,7 +4,7 @@ import {
   ShoppingCart,
   Zap,
   MapPin,
-  PiggyBank,
+  User,
   BookOpen,
   LogIn,
   UserPlus,
@@ -44,12 +44,12 @@ export default function BottomNav() {
         {tab("/market", "Expenses", ShoppingCart)}
         {tab("/finance", "Finance", Zap)}
         {tab("/trip", "Trip", MapPin)}
-        {/* 🚀 UPDATED: Salary → Plan Income */}
-        {tab("/savings", "Plan", PiggyBank)}
+        {tab("/profile", "Profile", User)}
         {tab("/blog", "Blog", BookOpen)}
       </nav>
     );
   }
+
   return (
     <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white dark:bg-gray-900/95 border-t border-gray-200 dark:border-gray-800 flex z-40 transition-colors duration-300">
       {tab("/blog", "Blog", BookOpen)}

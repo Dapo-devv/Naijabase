@@ -132,19 +132,14 @@ function HomeRoute() {
   );
 }
 
-// 🆕 Inner shell component that has access to the auth context
 function AppShell() {
   const location = useLocation();
   const { state } = useNaijaBase();
 
   const isGuest = state.currentUserId == null;
+  const isLoggedIn = !isGuest;
 
-  // 🎯 Hide Navbar + BottomNav + AdSlot on these routes
-  //    for guests who haven't logged in yet:
-  //    - Landing page (/)
-  //    - Login (/login)
-  //    - Register (/register)
-  //    - Reset Password (/reset-password)
+  // 📱 Hide Navbar + BottomNav + AdSlot on these routes for guests
   const hideNavOnMobile =
     isGuest &&
     (location.pathname === "/" ||
@@ -154,10 +149,25 @@ function AppShell() {
 
   return (
     <div className="h-screen overflow-hidden bg-[#F8F9FA] dark:bg-[#111827] flex flex-col transition-colors duration-300">
-      {/* 📱 Mobile: hide Navbar on guest auth pages. Desktop: always show it. */}
-      <div className={hideNavOnMobile ? "hidden md:block" : ""}>
-        <Navbar />
-      </div>
+      {/*
+        📱 MOBILE BEHAVIOR:
+        - When user is LOGGED IN → hide Navbar completely on mobile.
+          They navigate via the BottomNav tabs.
+        - When user is a GUEST on a full-screen page (Landing/Login/Register/Reset)
+          → hide Navbar on mobile.
+        - On DESKTOP → Navbar is always visible.
+      */}
+      {isLoggedIn ? (
+        // Logged in: show Navbar only on desktop
+        <div className="hidden md:block">
+          <Navbar />
+        </div>
+      ) : (
+        // Guest: show Navbar on desktop always; on mobile only when NOT on full-screen pages
+        <div className={hideNavOnMobile ? "hidden md:block" : ""}>
+          <Navbar />
+        </div>
+      )}
 
       <main
         className={`flex-1 overflow-y-auto pt-safe w-full ${
@@ -310,7 +320,7 @@ function AppShell() {
         </div>
       </main>
 
-      {/* 📱 Mobile: hide AdSlot + BottomNav on guest auth pages */}
+      {/* 📱 Mobile: hide AdSlot + BottomNav on guest full-screen pages */}
       {!hideNavOnMobile && (
         <div className="flex flex-col items-center justify-end w-full z-30 bg-[#F8F9FA] dark:bg-[#111827] flex-shrink-0">
           <div className="w-full max-w-[360px] pb-1 px-2 sm:hidden">
