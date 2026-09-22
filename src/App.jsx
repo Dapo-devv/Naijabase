@@ -137,20 +137,33 @@ function AppShell() {
   const location = useLocation();
   const { state } = useNaijaBase();
 
-  // 🎯 Detect landing page: guest visiting "/"
-  const isLandingPage =
-    location.pathname === "/" && state.currentUserId == null;
+  const isGuest = state.currentUserId == null;
+
+  // 🎯 Hide Navbar + BottomNav + AdSlot on these routes
+  //    for guests who haven't logged in yet:
+  //    - Landing page (/)
+  //    - Login (/login)
+  //    - Register (/register)
+  //    - Reset Password (/reset-password)
+  const hideNavOnMobile =
+    isGuest &&
+    (location.pathname === "/" ||
+      location.pathname === "/login" ||
+      location.pathname === "/register" ||
+      location.pathname === "/reset-password");
 
   return (
     <div className="h-screen overflow-hidden bg-[#F8F9FA] dark:bg-[#111827] flex flex-col transition-colors duration-300">
-      {/* 📱 Mobile: hide Navbar on Landing. Desktop: always show it. */}
-      <div className={isLandingPage ? "hidden md:block" : ""}>
+      {/* 📱 Mobile: hide Navbar on guest auth pages. Desktop: always show it. */}
+      <div className={hideNavOnMobile ? "hidden md:block" : ""}>
         <Navbar />
       </div>
 
       <main
         className={`flex-1 overflow-y-auto pt-safe w-full ${
-          isLandingPage ? "pb-0" : "pb-[calc(env(safe-area-inset-bottom)+90px)]"
+          hideNavOnMobile
+            ? "pb-0"
+            : "pb-[calc(env(safe-area-inset-bottom)+90px)]"
         } max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 scroll-smooth`}
       >
         <div className="min-h-full pb-0">
@@ -297,8 +310,8 @@ function AppShell() {
         </div>
       </main>
 
-      {/* 📱 Mobile: hide AdSlot + BottomNav on Landing. Show everywhere else. */}
-      {!isLandingPage && (
+      {/* 📱 Mobile: hide AdSlot + BottomNav on guest auth pages */}
+      {!hideNavOnMobile && (
         <div className="flex flex-col items-center justify-end w-full z-30 bg-[#F8F9FA] dark:bg-[#111827] flex-shrink-0">
           <div className="w-full max-w-[360px] pb-1 px-2 sm:hidden">
             <AdSlot
